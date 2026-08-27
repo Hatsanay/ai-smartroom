@@ -26,13 +26,44 @@
     <div class="frame-corner fc-br"></div>
 
     <button class="mute-btn" id="muteBtn" title="เปิด/ปิดเสียง">🔊</button>
-    <select class="engine-select" id="engineSelect" title="เลือก engine เสียงพูดของ FRIDAY">
-      <option value="vachana">เสียงคุณภาพสูง (ในเครื่อง)</option>
-      <option value="google">Google Translate (ทางเลือก)</option>
-    </select>
-    <select class="voice-select" id="voiceSelect" title="เลือกเสียงพูดของ FRIDAY">
-      <option value="th_f_1">เสียงหญิง 1</option>
-    </select>
+    <button class="settings-btn" id="settingsBtn" title="ตั้งค่า" aria-controls="sidebar" aria-expanded="false">⚙</button>
+
+    <!-- sidebar: สไลด์เข้ามาจากขวา เปิดด้วยปุ่ม ⚙ — ตอนนี้มีกลุ่มเดียวคือ "ตั้งค่า" -->
+    <div class="sidebar-scrim" id="sidebarScrim"></div>
+    <aside class="sidebar" id="sidebar" aria-hidden="true">
+      <div class="sidebar-header">
+        <span class="sidebar-title">SIDEBAR</span>
+        <button class="sidebar-close" id="sidebarClose" title="ปิด">✕</button>
+      </div>
+      <nav class="sidebar-body">
+        <details class="sidebar-group" open>
+          <summary>ตั้งค่า</summary>
+          <div class="sidebar-group-body">
+
+            <div class="setting-item">
+              <label>โฟลเดอร์ที่ FRIDAY เข้าถึงไฟล์ได้</label>
+              <button class="folder-btn" id="folderBtn" title="ยังไม่ได้ตั้งค่า — กดเพื่อเลือกโฟลเดอร์ที่ให้ FRIDAY เข้าถึงไฟล์ได้">📁 เลือกโฟลเดอร์</button>
+            </div>
+
+            <div class="setting-item">
+              <label for="engineSelect">Engine เสียงพูด</label>
+              <select class="engine-select" id="engineSelect" title="เลือก engine เสียงพูดของ FRIDAY">
+                <option value="vachana">เสียงคุณภาพสูง (ในเครื่อง)</option>
+                <option value="google">Google Translate</option>
+              </select>
+            </div>
+
+            <div class="setting-item" id="voiceField">
+              <label for="voiceSelect">เสียงพูด (เฉพาะ vachana)</label>
+              <select class="voice-select" id="voiceSelect" title="เลือกเสียงพูดของ FRIDAY">
+                <option value="th_f_1">เสียงหญิง 1</option>
+              </select>
+            </div>
+
+          </div>
+        </details>
+      </nav>
+    </aside>
 
     <!-- มุมซ้ายบน: เวลาตอบสนองจริง (วัดจากการเรียก /api/chat แต่ละครั้ง) -->
     <div class="panel panel-tl">
@@ -70,6 +101,7 @@
     <div class="yt-panel" id="ytPanel">
       <div class="yt-panel-title" id="ytPanelTitle">-</div>
       <div id="ytPlayerMount"></div>
+      <button class="yt-exit-fs" id="ytExitFs" type="button" title="ออกจากเต็มจอ (Esc)">✕</button>
     </div>
 
     <!-- สภาพอากาศ: โผล่มาเฉพาะตอนถามสภาพอากาศจริงๆ ข้อมูลทั้งหมดมาจาก Open-Meteo จริง ไม่ใช่ของปลอม -->

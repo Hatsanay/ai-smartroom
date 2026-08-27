@@ -25,6 +25,7 @@ const waveRing = document.getElementById('waveRing');
 const ytPanel = document.getElementById('ytPanel');
 const ytPanelTitle = document.getElementById('ytPanelTitle');
 const ytPlayerMount = document.getElementById('ytPlayerMount');
+const ytExitFs = document.getElementById('ytExitFs');
 const weatherPanel = document.getElementById('weatherPanel');
 const weatherLocation = document.getElementById('weatherLocation');
 const weatherEmoji = document.getElementById('weatherEmoji');
@@ -35,6 +36,7 @@ const weatherHumidity = document.getElementById('weatherHumidity');
 const weatherWind = document.getElementById('weatherWind');
 const weatherForecast = document.getElementById('weatherForecast');
 const weatherFx = document.getElementById('weatherFx');
+const folderBtn = document.getElementById('folderBtn');
 
 /* ---------- เสียง (Web Audio, ไม่ต้องมีไฟล์เสียงภายนอก) ---------- */
 
@@ -106,9 +108,9 @@ voiceSelect.addEventListener('change', () => {
   localStorage.setItem('friday_voice', selectedVoiceId);
 });
 
-// engine เสียง: 'vachana' (ค่าเริ่มต้น เสียงคุณภาพสูงในเครื่อง) หรือ 'google' (Google Translate TTS
-// ทางเลือกสำรอง ต้องมีเน็ต ปรับแต่งไม่ได้เท่า vachana ดู tts.py) — สลับไปมาได้จากเมนูมุมขวาบน
-let selectedEngine = localStorage.getItem('friday_tts_engine') || 'vachana';
+// engine เสียง: ค่าเริ่มต้น 'google' (Google Translate TTS ตามที่ผู้ใช้ขอ) — สลับกลับไป 'vachana'
+// (เสียงคุณภาพสูงในเครื่อง) ได้จากเมนู "ตั้งค่า" ใน sidebar จำค่าที่เลือกไว้ใน localStorage
+let selectedEngine = localStorage.getItem('friday_tts_engine') || 'google';
 
 // Google Translate TTS (ผ่าน gTTS) ไม่มีพารามิเตอร์ปรับความเร็วให้ปรับเหมือน vachana (API ของ
 // Google เองมีแค่ normal/slow ไม่มี "เร็วขึ้น" ให้เลือก) วัดจริงเทียบประโยคเดียวกัน: vachana ~3.66 วิ
@@ -116,10 +118,12 @@ let selectedEngine = localStorage.getItem('friday_tts_engine') || 'vachana';
 // เบราว์เซอร์คง pitch ให้อัตโนมัติ (ไม่ใช่เสียงติ๊งต๊องแบบเร่งเทป) ไม่ต้องประมวลผลเสียงเพิ่มฝั่ง server
 const GOOGLE_PLAYBACK_RATE = 1.4;
 
+const voiceField = document.getElementById('voiceField');
+
 function applyEngineUI() {
   engineSelect.value = selectedEngine;
-  // ตัวเลือกเสียง (th_f_1 ฯลฯ) มีความหมายเฉพาะ engine vachana เท่านั้น ซ่อนไว้ตอนเลือก google
-  voiceSelect.classList.toggle('hidden', selectedEngine !== 'vachana');
+  // ตัวเลือกเสียง (th_f_1 ฯลฯ) มีความหมายเฉพาะ engine vachana เท่านั้น ซ่อนทั้งแถว (label+select) ตอนเลือก google
+  voiceField.classList.toggle('hidden', selectedEngine !== 'vachana');
 }
 applyEngineUI();
 
@@ -127,6 +131,157 @@ engineSelect.addEventListener('change', () => {
   selectedEngine = engineSelect.value;
   localStorage.setItem('friday_tts_engine', selectedEngine);
   applyEngineUI();
+});
+
+/* ---------- Sidebar: สไลด์เข้าจากขวา เปิดด้วยปุ่ม ⚙ — ปิดด้วยปุ่ม ✕ / คลิกฉากหลัง / กด Esc ---------- */
+
+const settingsBtn = document.getElementById('settingsBtn');
+const sidebar = document.getElementById('sidebar');
+const sidebarScrim = document.getElementById('sidebarScrim');
+const sidebarClose = document.getElementById('sidebarClose');
+
+function setSidebar(open) {
+  sidebar.classList.toggle('open', open);
+  sidebarScrim.classList.toggle('visible', open);
+  settingsBtn.classList.toggle('active', open);
+  settingsBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  sidebar.setAttribute('aria-hidden', open ? 'false' : 'true');
+}
+
+settingsBtn.addEventListener('click', () => setSidebar(!sidebar.classList.contains('open')));
+sidebarClose.addEventListener('click', () => setSidebar(false));
+sidebarScrim.addEventListener('click', () => setSidebar(false));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && sidebar.classList.contains('open')) setSidebar(false);
+});
+
+/* ---------- โฟลเดอร์ที่อนุญาตให้ FRIDAY อ่านไฟล์ได้: state จริงจาก server เท่านั้น (ไม่ใช่แค่จำ
+   ไว้ฝั่ง browser) เพราะ server เป็นคนตรวจ path จริงตอน list_files()/read_file() ถูกเรียก ต้อง sync
+   กับ server เสมอไม่งั้นปุ่มจะโชว์ค่าที่ไม่ตรงกับที่ backend ใช้งานจริงอยู่ (ผิดหลักการ "ห้ามโชว์ข้อมูลปลอม") */
+
+function updateFolderBtnLabel(path) {
+  if (path) {
+    const name = path.split(/[\\/]/).filter(Boolean).pop() || path;
+    folderBtn.textContent = `📁 ${name}`;
+    folderBtn.title = `FRIDAY เข้าถึงไฟล์ได้แค่ในนี้: ${path} (กดเพื่อเปลี่ยน)`;
+    folderBtn.classList.add('configured');
+  } else {
+    folderBtn.textContent = '📁 เลือกโฟลเดอร์';
+    folderBtn.title = 'ยังไม่ได้ตั้งค่า — กดเพื่อเลือกโฟลเดอร์ที่ให้ FRIDAY เข้าถึงไฟล์ได้';
+    folderBtn.classList.remove('configured');
+  }
+}
+
+async function refreshFolderStatus() {
+  try {
+    const res = await fetch('/api/file_access_status', { cache: 'no-store' });
+    const data = await res.json();
+    updateFolderBtnLabel(data.path);
+  } catch (err) {
+    // เช็คไม่สำเร็จก็แค่ปล่อยปุ่มไว้ตามค่าล่าสุดที่รู้ ไม่ใช่ปัญหาใหญ่
+  }
+}
+
+folderBtn.addEventListener('click', async () => {
+  // เรียก native folder picker ของ Windows ฝั่ง server (ดู /api/browse_folder ใน server.py) เป็น
+  // blocking call รอจนผู้ใช้เลือก/ปิดหน้าต่างเลือกโฟลเดอร์ก่อน ปุ่มเลย disable รอไว้ระหว่างนั้น
+  folderBtn.disabled = true;
+  const prevText = folderBtn.textContent;
+  folderBtn.textContent = 'กำลังเปิดหน้าต่างเลือกโฟลเดอร์...';
+  try {
+    const res = await fetch('/api/browse_folder', { method: 'POST' });
+    const data = await res.json();
+    updateFolderBtnLabel(data.path);
+  } catch (err) {
+    folderBtn.textContent = prevText;
+  } finally {
+    folderBtn.disabled = false;
+  }
+});
+
+refreshFolderStatus();
+
+/* ---------- ตำแหน่งปัจจุบันของเบราว์เซอร์: แนบไปกับ /api/chat ให้ get_weather() ใช้พิกัดจริงตอน
+   ผู้ใช้ถามอากาศ "ที่นี่" โดยไม่ต้องพิมพ์ชื่อเมือง — มีแต่เบราว์เซอร์ที่รู้พิกัด (tool รันฝั่ง server)
+   ถ้าผู้ใช้ไม่อนุญาต ก็ปล่อยเป็น null แล้ว get_weather() จะถามชื่อเมืองกลับตามเดิม (ไม่พังอะไร) */
+
+let clientGeo = null; // { lat, lon, label } — label เป็น null ได้ถ้า reverse geocode ไม่สำเร็จ
+let clientGeoFetchedAt = 0;
+let geoInFlight = false; // กัน getCurrentPosition ซ้อนกันหลายเส้นทางที่เรียก refreshClientGeo()
+let geoLastAttemptAt = 0; // rate-limit การ retry ตอนส่งข้อความ ไม่ให้ยิงทุก submit ถ้ายังไม่ได้พิกัด
+const GEO_MAX_AGE_MS = 10 * 60 * 1000; // เกินนี้ถือว่าเก่า ค่อยขอพิกัดใหม่
+const GEO_RETRY_MS = 20000; // เว้นอย่างน้อยเท่านี้ระหว่าง retry ตอน submit
+
+async function reverseGeocodeLabel(lat, lon) {
+  // BigDataCloud reverse-geocode-client: ฟรี ไม่ต้องขอ key ออกแบบมาให้เรียกจากเบราว์เซอร์โดยเฉพาะ
+  // ใช้แค่หา "ชื่อพื้นที่" มาโชว์บนการ์ดอากาศ/พูดตอบ — เรียกไม่สำเร็จก็ไม่เป็นไร ใช้ "ตำแหน่งปัจจุบัน" แทน
+  try {
+    const opts = { cache: 'no-store' };
+    if (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) opts.signal = AbortSignal.timeout(6000);
+    const res = await fetch(
+      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=th`,
+      opts
+    );
+    if (!res.ok) return null;
+    const d = await res.json();
+    return d.city || d.locality || d.principalSubdivision || null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function refreshClientGeo() {
+  if (geoInFlight) return;
+  if (!navigator.geolocation) {
+    console.warn('[geo] เบราว์เซอร์นี้ไม่มี navigator.geolocation');
+    return;
+  }
+  if (!window.isSecureContext) {
+    // geolocation ใช้ได้เฉพาะ secure context — http://127.0.0.1 / http://localhost / https เท่านั้น
+    // ถ้าเปิดผ่าน IP เครื่องในวง LAN (http://192.168.x.x:8000) เบราว์เซอร์จะบล็อกเงียบๆ
+    console.warn('[geo] ไม่ใช่ secure context — เปิดหน้าเว็บผ่าน http://127.0.0.1:8000 (ไม่ใช่ IP เครื่อง)');
+    return;
+  }
+  geoInFlight = true;
+  geoLastAttemptAt = Date.now();
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      geoInFlight = false;
+      const lat = +pos.coords.latitude.toFixed(4); // ~11m พอสำหรับอากาศ + หยาบลงนิดเรื่อง privacy
+      const lon = +pos.coords.longitude.toFixed(4);
+      // เซ็ตพิกัดไว้ก่อนเลย เผื่อ reverse geocode ค้าง/ล่ม จะได้มีพิกัดส่งให้ server ทันที
+      clientGeo = { lat, lon, label: null };
+      clientGeoFetchedAt = Date.now();
+      const label = await reverseGeocodeLabel(lat, lon);
+      if (label && clientGeo && clientGeo.lat === lat && clientGeo.lon === lon) clientGeo.label = label;
+    },
+    (err) => {
+      geoInFlight = false;
+      // code 1 = ไม่อนุญาต, 2 = หาตำแหน่งไม่ได้, 3 = timeout — log ไว้ debug ได้ (F12 console)
+      console.warn('[geo] getCurrentPosition ล้มเหลว:', err.code, err.message);
+    },
+    { enableHighAccuracy: false, timeout: 8000, maximumAge: 5 * 60 * 1000 }
+  );
+}
+
+setTimeout(refreshClientGeo, 1200); // หน่วงนิดกันชนกับ prompt ขอสิทธิ์ไมค์ตอนโหลดหน้า
+
+// Permissions API: ถ้าผู้ใช้กดอนุญาตตำแหน่งทีหลัง (จาก Site settings ของเบราว์เซอร์) ให้ดึงพิกัด
+// ทันทีโดยไม่ต้องรีเฟรชหน้า — นี่คือเคสที่เจอจริง (อนุญาตแล้วแต่ระบบยังบอกว่าเข้าถึงไม่ได้)
+if (navigator.permissions && navigator.permissions.query) {
+  navigator.permissions.query({ name: 'geolocation' })
+    .then((st) => {
+      if (st.state === 'granted') refreshClientGeo();
+      st.addEventListener('change', () => {
+        if (st.state === 'granted') refreshClientGeo();
+      });
+    })
+    .catch(() => {});
+}
+
+// กลับมาที่แท็บนี้ (เช่นสลับไปกดอนุญาตในตั้งค่าเบราว์เซอร์แล้วกลับมา) แล้วยังไม่มีพิกัด -> ลองใหม่
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && !clientGeo) refreshClientGeo();
 });
 
 let ttsSpeaking = false;
@@ -278,6 +433,14 @@ function renderWaveRing() {
   // แชท: โชว์เฉพาะตอนกำลังเรียก/ใช้งาน FRIDAY อยู่จริง (engagedActive) ส่วน :hover คุมเองด้วย CSS แล้ว
   log.classList.toggle('chat-active', engagedActive);
 
+  // YouTube เต็มจออยู่แล้วผู้ใช้เพิ่งเรียก Friday (engagedActive ขึ้นขอบ) -> ย่อจอชั่วคราวให้เห็น HUD หลัก
+  // เต็มรูปแบบ (เวฟ/สี/แชท เหมือนหน้าหลักเป๊ะ) — พอคุยจบ + เงียบครบ 15 วิ (expireFollowUpWindow) กลับไปเต็มจอเอง
+  if (engagedActive && !prevEngagedActive && ytMaximized) {
+    exitYoutubeFullscreen();          // เคลียร์ ytWasMaximizedBeforeEngage ด้วย
+    ytWasMaximizedBeforeEngage = true; // ...แล้วตั้งใหม่ทีหลัง = "กลับไปเต็มจอเมื่อคุยจบ"
+  }
+  prevEngagedActive = engagedActive;
+
   const micOpen = isMicOpen();
   const active = micOpen || ttsSpeaking;
   waveRing.classList.toggle('active', active);
@@ -417,6 +580,7 @@ let followUpTimer = null;
 // "Friday" (ครอบคลุมช่วงกำลังประมวลผล + กำลังตอบด้วย) แล้วค่อยนับ 15 วิถอยหลังหลังตอบเสร็จจริงๆ
 // ถึงจะกลับเป็นสีเดิม ไม่ใช่แค่ตอนเข้าสู่ช่วง follow-up เท่านั้น
 let engagedActive = false;
+let prevEngagedActive = false; // ใช้จับ rising edge ของ engagedActive ใน renderWaveRing (ย่อจอ YouTube ตอนถูกเรียก)
 
 // เรียกได้ทั้งตอนคุยผ่านเสียง (wake mode) และพิมพ์/กดพูดแบบธรรมดา — engagedActive ใช้คุม
 // สีเขียว + การโชว์แชทเหมือนกันหมด ส่วนข้อความ "ฟังต่อเนื่อง"/ไม่ต้องพูด "Friday" ซ้ำ (followUpActive)
@@ -435,6 +599,12 @@ function expireFollowUpWindow() {
   followUpActive = false;
   engagedActive = false;
   if (status.textContent === FOLLOWUP_STATUS_TEXT) status.textContent = 'STANDBY';
+  // คุยกับ Friday จบแล้ว (พูดจบ + เงียบครบ 15 วิ ไม่มีถามต่อ) — ถ้าเมื่อกี้ย่อจอ YouTube ไว้เพราะโดนเรียก
+  // ให้กลับไปเต็มจอเหมือนเดิม (เว้นแต่เพลงถูกปิดไปแล้ว — เช็คจาก .visible)
+  if (ytWasMaximizedBeforeEngage) {
+    ytWasMaximizedBeforeEngage = false;
+    if (ytPlayer && ytPanel.classList.contains('visible')) requestYoutubeFullscreen();
+  }
 }
 
 // เรียกตอนมีคนพูดต่อจริงๆ ภายใน 15 วิ (ยังคุยกันต่อ ไม่ใช่หมดเวลา) engagedActive เลยยังคงเป็น true ต่อ
@@ -920,6 +1090,7 @@ function controlYoutube(action) {
     if (typeof ytPlayer.stopVideo === 'function') ytPlayer.stopVideo();
     ytIsPlaying = false;
     ytVolume = 100; // เริ่มเซสชันฟังเพลงครั้งถัดไปที่ 100% เสมอ ไม่ค้างค่าที่เคยปรับไว้ข้ามเซสชันเก่า
+    exitYoutubeFullscreen(); // ปิดเพลง -> ออกจากเต็มจอ + ยกเลิกแผนกลับไปเต็มจอ (ไม่ให้ค้างจอดำ/เด้งกลับ)
     ytPanel.classList.remove('visible');
   } else if (action === 'volume_up' || action === 'volume_down') {
     const delta = action === 'volume_up' ? YT_VOLUME_STEP : -YT_VOLUME_STEP;
@@ -928,8 +1099,70 @@ function controlYoutube(action) {
     // ดังแทรกขึ้นมากลางที่ FRIDAY พูดอยู่ — เก็บ ytVolume ไว้ก่อน พอ TTS จบ restoreYoutubeVolume()
     // จะหยิบค่าล่าสุดไปใช้เอง
     if (!ttsSpeaking) restoreYoutubeVolume();
+  } else if (action === 'fullscreen') {
+    requestYoutubeFullscreen();
+  } else if (action === 'exit_fullscreen') {
+    exitYoutubeFullscreen();
   }
 }
+
+/* "เต็มจอ" = ขยายเครื่องเล่น YouTube ให้เต็ม viewport ของเบราว์เซอร์ด้วย CSS (คลาส .maximized บน
+   #ytPanel) — ทำงานทันทีเสมอ ไม่ต้องมี user gesture เลย สั่งผ่านเสียงได้จริง (ต่างจาก Fullscreen API
+   ที่ต้องมี gesture) ถ้าบังเอิญมี gesture อยู่ (พิมพ์คำสั่ง + Enter) จะลองขอ real fullscreen ซ้อนให้
+   ด้วยเพื่อซ่อนแถบเบราว์เซอร์ — ไม่ได้ก็ไม่เป็นไร CSS ทำให้เต็มจอเบราว์เซอร์ไปแล้ว */
+
+let ytMaximized = false;
+let ytWasMaximizedBeforeEngage = false; // ย่อจอชั่วคราวเพราะผู้ใช้เรียก Friday -> กลับไปเต็มจอตอนคุยจบ (expireFollowUpWindow)
+
+function ytFullscreenTarget() {
+  if (ytPlayer && typeof ytPlayer.getIframe === 'function') {
+    try {
+      const f = ytPlayer.getIframe();
+      if (f) return f;
+    } catch (err) { /* getIframe เรียกก่อน player พร้อมได้ ปล่อยไปใช้ตัวสำรองข้างล่าง */ }
+  }
+  return document.getElementById('ytPlayerMount'); // YT API แทน div ด้วย <iframe> ที่ใช้ id เดิม — lookup ใหม่ ไม่ใช้ตัวแปรเก่าที่ค้าง
+}
+
+function doRequestFullscreen(el) {
+  const req = el && (el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen);
+  if (!req) return Promise.reject(new Error('no fullscreen api'));
+  try {
+    return Promise.resolve(req.call(el));
+  } catch (err) {
+    return Promise.reject(err);
+  }
+}
+
+function requestYoutubeFullscreen() {
+  if (!ytPanel) return;
+  ytMaximized = true;
+  ytPanel.classList.add('maximized');
+  // bonus: ขอ real fullscreen ถ้ามี gesture (พิมพ์คำสั่ง) — สั่งด้วยเสียงจะ reject เฉยๆ ไม่ต้องทำอะไรต่อ
+  doRequestFullscreen(ytFullscreenTarget()).catch(() => {});
+}
+
+function exitYoutubeFullscreen() {
+  ytMaximized = false;
+  ytWasMaximizedBeforeEngage = false; // สั่งออกชัดเจน (ผู้ใช้/ระบบ) -> ยกเลิกแผนกลับไปเต็มจออัตโนมัติด้วย
+  if (ytPanel) ytPanel.classList.remove('maximized');
+  if (document.fullscreenElement && document.exitFullscreen) {
+    document.exitFullscreen().catch(() => {});
+  } else if (document.webkitFullscreenElement && document.webkitExitFullscreen) {
+    document.webkitExitFullscreen();
+  }
+}
+
+if (ytExitFs) ytExitFs.addEventListener('click', exitYoutubeFullscreen);
+
+// กด Esc = ออกจากเต็มจอ / ยกเลิกการกลับไปเต็มจออัตโนมัติ (นอกจากสั่งด้วยเสียง "ออกจากเต็มจอ") เผื่อ STT ฟังไม่ติด
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && (ytMaximized || ytWasMaximizedBeforeEngage)) exitYoutubeFullscreen();
+});
+// ผู้ใช้กด Esc ออกจาก real fullscreen (ที่ขอซ้อนไว้) -> เลิก .maximized ด้วย ไม่ให้ค้างเต็มจอครึ่งๆ
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement && ytMaximized) exitYoutubeFullscreen();
+});
 
 /* ---------- สภาพอากาศ: ข้อมูลจริงจาก Open-Meteo ทั้งหมด (คำนวณ/แปล emoji มาจาก server แล้ว
    ดู tools.py) ฝั่งนี้แค่เอาไปแปะแสดงผลตรงๆ ไม่มีการเดา/เติมค่าเองเลย ---------- */
@@ -1148,10 +1381,14 @@ form.addEventListener('submit', async (e) => {
 
   const t0 = performance.now();
   try {
+    // ยังไม่มีพิกัด (ขอตอนโหลดหน้าไม่สำเร็จ / เพิ่งกดอนุญาต) หรือพิกัดเก่าเกิน 10 นาที -> ขอใหม่แบบ
+    // ไม่รอ (request นี้ใช้ค่าที่มีอยู่ รอบหน้าค่อยได้ค่าสด) — rate-limit ไว้กันยิงทุก submit ตอนโดนปฏิเสธ
+    const geoStale = clientGeo && Date.now() - clientGeoFetchedAt > GEO_MAX_AGE_MS;
+    if ((!clientGeo || geoStale) && Date.now() - geoLastAttemptAt > GEO_RETRY_MS) refreshClientGeo();
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify(clientGeo ? { message, geo: clientGeo } : { message }),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();

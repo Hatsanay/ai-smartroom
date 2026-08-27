@@ -3,3 +3,5 @@ __pycache__/
 venv/
 voices/
 .claude/
+logs/
+file_access_config.json

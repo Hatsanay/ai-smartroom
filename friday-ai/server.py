@@ -1,6 +1,8 @@
 import os
 import time
+import tkinter
 from datetime import date
+from tkinter import filedialog
 from typing import Optional
 
 import uvicorn
@@ -12,8 +14,20 @@ from google.genai import errors as genai_errors
 from google.genai import types
 from pydantic import BaseModel
 
+import tools
 from personality import SYSTEM_PROMPT, strip_markdown
-from tools import control_youtube, get_weather, open_youtube, pop_pending_action, search_web
+from tools import (
+    control_youtube,
+    create_folder,
+    delete_path,
+    get_weather,
+    list_files,
+    open_youtube,
+    pop_pending_action,
+    read_file,
+    search_web,
+    write_file,
+)
 from tts import synthesize as tts_synthesize
 
 load_dotenv()
@@ -28,7 +42,17 @@ chat = client.chats.create(
     model=MODEL_NAME,
     config=types.GenerateContentConfig(
         system_instruction=SYSTEM_PROMPT,
-        tools=[search_web, open_youtube, control_youtube, get_weather],
+        tools=[
+            search_web,
+            open_youtube,
+            control_youtube,
+            get_weather,
+            list_files,
+            read_file,
+            create_folder,
+            write_file,
+            delete_path,
+        ],
     ),
 )
 
@@ -77,6 +101,9 @@ def _parse_quota_error(e: genai_errors.ClientError) -> tuple[Optional[int], floa
 
 class ChatRequest(BaseModel):
     message: str
+    # พิกัดจาก navigator.geolocation ของเบราว์เซอร์ (ถ้าผู้ใช้อนุญาต) — {"lat": .., "lon": .., "label": ..}
+    # ส่งมาให้ get_weather() ใช้ตอนผู้ใช้ถามอากาศโดยไม่ระบุชื่อเมือง ดู tools.set_client_location()
+    geo: Optional[dict] = None
 
 
 class ChatResponse(BaseModel):
@@ -106,6 +133,9 @@ def chat_endpoint(req: ChatRequest) -> ChatResponse:
         remaining = int(quota_state["cooldown_until"] - now)
         return ChatResponse(reply=f"โควตา Gemini เต็มชั่วคราวค่ะ กรุณารออีก {remaining} วินาที")
 
+    # พิกัดเบราว์เซอร์มีผลแค่ระหว่าง request นี้ — เซ็ตก่อนเรียก LLM แล้วล้างทิ้งใน finally ทุกทางออก
+    # (เหมือน pop_pending_action) กันพิกัดเก่าค้างไปโผล่ใน request ถัดไปที่อาจไม่ได้ส่ง geo มา
+    tools.set_client_location(req.geo)
     try:
         response = chat.send_message(req.message)
         quota_state["used_today"] += 1
@@ -127,6 +157,8 @@ def chat_endpoint(req: ChatRequest) -> ChatResponse:
         # ให้ client แบบไม่มีข้อความที่เข้าใจได้ — เจอจริงจาก log จริงของผู้ใช้)
         pop_pending_action()
         return ChatResponse(reply="ตอนนี้ Gemini กำลังมีผู้ใช้งานเยอะชั่วคราวค่ะ ลองถามใหม่อีกครั้งสักครู่นะคะ")
+    finally:
+        tools.set_client_location(None)
 
 
 @app.get("/api/quota", response_model=QuotaStatus)
@@ -153,6 +185,34 @@ def quota_status(response: Response) -> QuotaStatus:
 def tts_endpoint(req: TTSRequest) -> Response:
     audio_bytes, media_type = tts_synthesize(req.text, req.voice, req.engine)
     return Response(content=audio_bytes, media_type=media_type)
+
+
+class FolderStatus(BaseModel):
+    path: Optional[str] = None
+
+
+@app.get("/api/file_access_status", response_model=FolderStatus)
+def file_access_status() -> FolderStatus:
+    return FolderStatus(path=tools.get_allowed_folder())
+
+
+@app.post("/api/browse_folder", response_model=FolderStatus)
+def browse_folder_endpoint() -> FolderStatus:
+    # เปิด native folder picker ของ Windows จริงๆ ผ่าน tkinter (มากับ Python อยู่แล้ว ไม่ต้องลง lib
+    # เพิ่ม) — ใช้ได้เพราะ server รันอยู่บนเครื่องเดียวกับที่ผู้ใช้เห็นหน้าเว็บ (ยังไม่ใช่ Pi) เรียกนี้
+    # เป็น blocking call รอจนผู้ใช้เลือก/ปิดหน้าต่างก่อนถึงจะ return กลับไป
+    root = tkinter.Tk()
+    root.withdraw()
+    root.attributes("-topmost", True)
+    try:
+        selected = filedialog.askdirectory(title="เลือกโฟลเดอร์ที่ให้ FRIDAY เข้าถึงไฟล์ได้")
+    finally:
+        root.destroy()
+
+    if selected:
+        tools.set_allowed_folder(selected)
+        return FolderStatus(path=selected)
+    return FolderStatus(path=tools.get_allowed_folder())
 
 
 app.mount("/", StaticFiles(directory="static", html=True), name="static")

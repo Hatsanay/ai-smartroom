@@ -74,6 +74,7 @@
 - [ ] **Step 5** — ขยาย tool (คุม TV, เครื่องเล่น) ทีละอัน
 - [x] **Step 6** — เสียงบนเว็บ: กดไมค์พูด (STT) + FRIDAY พูดตอบ (TTS) + **โหมดฟังตลอดพร้อม wake word "Friday"** ทั้งหมดผ่าน Web Speech API ของเบราว์เซอร์ (ของเดิมที่วางแผนจะใช้ Whisper ยังไม่ได้ทำ เพราะย้ายมาทำเวอร์ชันเว็บก่อน)
 - [x] **Tool: `open_youtube()` + `control_youtube()`** — ให้ FRIDAY ค้นหาแล้ว**เล่นเพลง/วิดีโอ YouTube อัตโนมัติจริง** (ไม่ใช่แค่เปิดหน้าค้นหา) พร้อมสั่งหยุด/เล่นต่อ/ปิด/เปลี่ยนเพลงด้วยเสียงได้
+- [x] **Tool: `list_files()` + `read_file()`** — ให้ FRIDAY อ่านไฟล์ในคอมได้ **เฉพาะโฟลเดอร์ที่ผู้ใช้เลือกไว้เท่านั้น** (เลือกผ่านปุ่ม native folder picker บนหน้าเว็บ) รายละเอียด security/สถาปัตยกรรมดูหัวข้อ "เข้าถึงไฟล์ในคอม" ด้านล่าง
 - [x] **Tool: `get_weather()`** — เช็คสภาพอากาศจริงผ่าน [Open-Meteo](https://open-meteo.com/) (ฟรี ไม่ต้องขอ API key เหมือน ddgs/yt-dlp) พร้อม UI การ์ดแสดงผลสวยๆ มุมขวากลางจอ (ล้อกับ `.yt-panel` ฝั่งซ้าย)
   - `_search_youtube`-style pattern เดิม: geocoding API (`geocoding-api.open-meteo.com/v1/search`) แปลงชื่อสถานที่เป็นพิกัดก่อน แล้วยิง forecast API (`api.open-meteo.com/v1/forecast`) ด้วยพิกัดนั้นอีกที ขอทั้ง current weather + พยากรณ์ 4 วันข้างหน้า (`forecast_days=4`)
   - แปลรหัสสภาพอากาศ WMO (มาตรฐานที่ Open-Meteo ใช้) เป็นคำอธิบายไทย + emoji + หมวด `fx` (สำหรับเลือก animation พื้นหลัง ดูด้านล่าง) ไว้ที่ `_WMO_WEATHER` dict ใน `tools.py` **คำนวณครั้งเดียวฝั่ง server** แล้วส่งค่าที่พร้อมแสดงผลไปให้ทั้งข้อความตอบ (พูด/แชท) และ `action.data` (สำหรับ UI) เลย — ตั้งใจไม่ทำ mapping ชุดเดียวกันซ้ำสองที่ (Python + JS) กัน mapping หลุดไม่ตรงกันในระยะยาว (ต่างจาก `_YT_VOLUME_STEP`/`YT_VOLUME_STEP` ที่จำเป็นต้อง sync มือเพราะเป็นค่าที่ทั้งสองฝั่งต้องใช้แยกกันจริงๆ)
@@ -93,7 +94,15 @@
 **`action.type` ที่มีตอนนี้ 3 แบบ (`server.py` ส่ง, `app.js` เป็นคนลงมือจริง):**
 1. `open_url` — เปิดแท็บใหม่ด้วย `url` ที่กำหนด (ใช้ตอน `open_youtube()` ไม่มี query เลย แค่เปิดหน้าแรก youtube.com เฉยๆ)
 2. `play_youtube` — โหลด+เล่นวิดีโอ `video_id`/`title` ที่กำหนดในเครื่องเล่นที่ฝังอยู่ในหน้าเว็บเอง (ไม่ใช่เปิดแท็บแยก)
-3. `youtube_control` — สั่ง `action` ("pause"/"resume"/"stop"/"volume_up"/"volume_down") กับเครื่องเล่นที่กำลังเล่นอยู่
+3. `youtube_control` — สั่ง `action` ("pause"/"resume"/"stop"/"volume_up"/"volume_down"/"fullscreen"/"exit_fullscreen") กับเครื่องเล่นที่กำลังเล่นอยู่
+
+**เปิดวิดีโอเต็มจอ (`control_youtube('fullscreen')` / `'exit_fullscreen'`):**
+- **กลไกหลัก = CSS ไม่ใช่ Fullscreen API** — `requestYoutubeFullscreen()` ใน `app.js` แค่ `ytPanel.classList.add('maximized')` แล้ว CSS `.yt-panel.maximized { position:fixed; inset:0; width:100vw; height:100vh; z-index:500 }` ขยายเครื่องเล่นเต็ม viewport ของเบราว์เซอร์ — **ไม่ต้องมี user gesture เลย เลยสั่งผ่านเสียงได้ทันที ไม่มีปุ่มให้ผู้ใช้กดเปิดเอง** (ผู้ใช้ขอชัดเจนว่าห้ามมีปุ่มกด). ตั้ง flag `ytMaximized` ไว้ track สถานะ
+- **bonus real fullscreen**: หลัง add คลาสแล้ว ยังลอง `doRequestFullscreen(ytFullscreenTarget())` ต่อ (target = `ytPlayer.getIframe()` / fallback `document.getElementById('ytPlayerMount')` — YT API แทน `<div>` ด้วย `<iframe>` id เดิม ต้อง lookup ใหม่ ห้ามใช้ตัวแปรเก่าที่ค้าง node) — ได้เฉพาะตอนมี gesture (พิมพ์คำสั่ง + Enter, transient activation ~5 วิ) เพื่อซ่อนแถบเบราว์เซอร์เพิ่ม; สั่งด้วยเสียงจะ `.catch(() => {})` เงียบๆ ไม่ทำอะไรต่อ (CSS ทำให้เต็มจอเบราว์เซอร์ไปแล้ว)
+- **ออกจากเต็มจอ**: สั่ง "ออกจากเต็มจอ" (`exit_fullscreen`) / กด `Esc` (keydown handler) / กดปุ่ม `#ytExitFs` (✕ มุมขวาบน โผล่เฉพาะตอน `.maximized`) — `exitYoutubeFullscreen()` ลบคลาส + `document.exitFullscreen()` ถ้า real FS ทำงานอยู่ + เคลียร์ `ytWasMaximizedBeforeEngage` (ยกเลิกการเด้งกลับเต็มจอ). `fullscreenchange` listener: ถ้าผู้ใช้กด Esc ออกจาก real FS ให้ลบ `.maximized` ตามด้วย ไม่ให้ค้างเต็มจอครึ่งๆ. `control_youtube('stop')` เรียก `exitYoutubeFullscreen()` ด้วยเสมอ (ปิดเพลงแล้วไม่เด้งกลับ)
+
+- **ย่อจอชั่วคราวตอนเรียก Friday ระหว่างเต็มจอ (ผู้ใช้ขอ)** — เต็มจอ (`.maximized`) แล้วบัง HUD หลัก (เวฟ/สี/แชท z-index ต่ำกว่า 500) หมด เรียก Friday ตอนนั้นเลยไม่เห็น feedback อะไร → แก้โดย **auto-ย่อจอชั่วคราว**: `renderWaveRing()` (loop ทุกเฟรมอยู่แล้ว) จับ **rising edge ของ `engagedActive`** ถ้าตอนนั้น `ytMaximized` เป็น true → `exitYoutubeFullscreen()` แล้วตั้ง `ytWasMaximizedBeforeEngage = true` (ต้องเรียก exit ก่อนแล้วตั้ง flag ทีหลัง เพราะ exit เคลียร์ flag). พอคุยจบ = `expireFollowUpWindow()` (Friday พูดจบ + เงียบครบ 15 วิ ไม่มีถามต่อ — เป็น hook เดียวกับที่ปิดสีเขียว/แชท) → ถ้า `ytWasMaximizedBeforeEngage` และเพลงยังเล่นอยู่ (`ytPlayer && ytPanel.classList.contains('visible')`) → `requestYoutubeFullscreen()` กลับไปเต็มจอเอง. ถามต่อภายใน 15 วิ → timer reset (ผ่าน `startFollowUpWindow()` เดิม) → ยังย่อจออยู่จนกว่าจะเงียบจริง. สั่ง "ออกจากเต็มจอ"/`Esc`/ปิดเพลง ระหว่างช่วงนี้ → เคลียร์ `ytWasMaximizedBeforeEngage` ไม่เด้งกลับ. **ผลลัพธ์: ช่วงคุยกับ Friday ได้ HUD หน้าหลักเต็มรูปแบบเป๊ะ ไม่ต้องทำ mini-overlay แยก**
+- **ข้อจำกัดจาก `_pending_action` เป็น slot เดียว**: ขอ "เปิดเพลง X แบบเต็มจอ" ในประโยคเดียว LLM เรียก `open_youtube()` + `control_youtube('fullscreen')` ในเทิร์นเดียวไม่ได้ (อันหลังทับ `_pending_action` อันแรก เพลงเลยไม่โหลด) — docstring ของ `control_youtube` สั่งให้ LLM เปิดเพลงก่อน แล้วบอกผู้ใช้สั่ง "เต็มจอ" ต่ออีกที
 
 **ทำไมต้อง "ฝัง player ในหน้าเว็บ" (`YT.Player`) แทนเปิดแท็บแยกด้วย `window.open()` เหมือนตอนแรก:**
 - แท็บที่เปิดแยกเป็นคนละ browsing context กันเลย โค้ดเราคุม play/pause/stop จากภายนอกไม่ได้จริงๆ (ไม่มี API ให้เข้าถึง iframe ข้าม origin) — ต้องฝัง [YouTube IFrame Player API](https://developers.google.com/youtube/iframe_api_reference) (`https://www.youtube.com/iframe_api`, ฟรี ไม่ต้องขอ key) ไว้ในหน้าเว็บเราเองถึงจะเรียก `player.pauseVideo()`/`playVideo()`/`stopVideo()`/`loadVideoById()` ได้จริง
@@ -168,6 +177,16 @@
 **Engine เสียงตัวที่ 2 (ทางเลือก): Google Translate TTS ผ่าน `gTTS`**
 - ผู้ใช้ขอให้เพิ่มเป็น**ทางเลือกที่สลับไปมาได้** ไม่ใช่แทนที่ `vachana` — `tts.py`'s `synthesize()` รับพารามิเตอร์ `engine` (`"vachana"` ค่าเริ่มต้น หรือ `"google"`) คืน media_type ต่างกันตามจริง (`audio/wav` vs `audio/mpeg`) ฝั่ง client ไม่ต้องแก้อะไรเพิ่มเพราะ `res.blob()` เอา Content-Type จาก response header มาใช้ตรงๆ อยู่แล้ว
 - UI: dropdown `#engineSelect` มุมขวาบน (เหนือ `#voiceSelect`) จำค่าไว้ใน `localStorage` key `friday_tts_engine` — ตอนเลือก `google` จะซ่อน `#voiceSelect` อัตโนมัติ (คลาส `.hidden`) เพราะรายชื่อเสียง `th_f_1` ฯลฯ มีความหมายเฉพาะ `vachana` เท่านั้น
+- **ปัจจุบัน (ผู้ใช้ขอ): ค่าเริ่มต้นเป็น `google`** — `app.js` ตั้ง `let selectedEngine = localStorage.getItem('friday_tts_engine') || 'google'` (default google แต่สลับกลับ `vachana` ได้ + จำค่า)
+
+## Sidebar (เมนู ⚙ ตั้งค่า)
+
+ผู้ใช้ขอให้ย้ายเมนูที่เคยลอยมุมจอ (`#folderBtn` / `#engineSelect` / `#voiceSelect`) เข้ามาเป็น **เมนูย่อยของ "ตั้งค่า" ใน sidebar** แทน — เดิมเคยขอซ่อนทั้งหมด รอบนี้เอากลับมาแต่จัดใหม่
+
+- **HTML** (`index.html`): ปุ่ม `#settingsBtn` (⚙, มุมขวาล่าง ที่ slot เดิมของ voice-select `bottom:212px right:24px` เหนือปุ่ม mute) + `<aside class="sidebar" id="sidebar">` สไลด์เข้าจากขวา + `<div class="sidebar-scrim">` ฉากหลังจางๆ กดปิด ข้างในเป็น `<details class="sidebar-group" open><summary>ตั้งค่า</summary>` ครอบ `.setting-item` 3 อัน (แต่ละอันมี `<label>` + control) — **id ของ control 3 ตัวเหมือนเดิมเป๊ะ** `app.js` เลยไม่ต้องแก้ตรรกะเดิม (`folderBtn`/`engineSelect`/`voiceSelect` ยัง `getElementById` เจอ)
+- **CSS** (`style.css`): ลบ `display:none !important` + absolute positioning เดิมของ 3 control ออก เปลี่ยนเป็น `width:100%` block ใน `.setting-item`. เพิ่ม `.settings-btn` / `.sidebar` (`transform: translateX(100%)` → `.open` เป็น `0`) / `.sidebar-scrim` (`.visible`) / `.sidebar-group summary` (ซ่อน default marker ใช้ `▸` หมุน 90° ตอน `[open]`) — ธีมเดียวกับ HUD (cyan mono, พื้นโปร่งเบลอ)
+- **JS** (`app.js`): `setSidebar(open)` toggle คลาส `.open`/`.visible`/`.active` + `aria-*` — เปิดด้วยปุ่ม ⚙, ปิดด้วยปุ่ม ✕ / คลิก scrim / กด `Escape`. `applyEngineUI()` เปลี่ยนจาก toggle `.hidden` บน `voiceSelect` เป็นบน `#voiceField` (ทั้งแถว label+select) ตอน engine ≠ vachana
+- ตั้งโฟลเดอร์ file-access กลับมาทำผ่านหน้าเว็บได้แล้ว (ปุ่มอยู่ใน sidebar) — คู่กับ persistence ที่ทำไว้ ตั้งครั้งเดียวจำข้าม restart
 - ข้อเสียของ Google engine (บอกผู้ใช้ไปแล้ว): endpoint ไม่เป็นทางการ ต้องมีเน็ต ปรับ noise/speed ผ่าน API ไม่ได้เหมือน vachana (Google TTS API มีแค่ normal/slow ไม่มี "เร็วขึ้น") และเสี่ยงโดน rate-limit ถ้าเรียกถี่ — เหมาะเป็น fallback/ของเล่นเปรียบเทียบมากกว่าใช้หลัก
 - **ความเร็วพูดของ Google engine ช้ากว่า vachana มาก** — วัดจริงประโยคเดียวกัน: vachana ~3.66 วิ vs google ~6.79 วิ (ช้ากว่าเกือบ 2 เท่า) เพราะ Google TTS API ไม่มีพารามิเตอร์ปรับความเร็วแบบ vachana's `length_scale` แก้โดยเร่ง `ttsAudio.playbackRate = 1.4` ใน `app.js` เฉพาะตอน `selectedEngine === 'google'` เท่านั้น (vachana ยังคง 1.0 เหมือนเดิมเพราะปรับ SPEED ที่ต้นทางอยู่แล้ว) เบราว์เซอร์คง pitch อัตโนมัติเลยไม่ใช่เสียงเร่งเทปแบบตลก ไม่ต้องประมวลผลเสียงเพิ่มฝั่ง server เลย
 - ติดตั้ง `gTTS` ดันให้ `click` conflict กับ `huggingface-hub` (ที่ `vachanatts` ใช้โหลดโมเดล) เล็กน้อยตาม pip resolver warning แต่ทดสอบจริงแล้วทั้งคู่ import/ทำงานได้ปกติไม่มีปัญหา (อัปเกรด `click` เป็น `>=8.4.2` ให้ `huggingface-hub` พอใจ แล้ว `gTTS` ก็ยังใช้ได้)
@@ -195,6 +214,49 @@ Bar 40 อันรอบ core ขยับตามข้อมูลจริ�
 - `startFollowUpWindow()` ถูกเรียกไม่มีเงื่อนไข (`if (wakeMode)` เดิม) หลัง `speak()` จบทุกเส้นทาง รวมถึง error path (`catch` ใน submit handler) ด้วย — กันแชท/สีเขียวค้างตลอดไปถ้า request ล้มเหลว แต่ `followUpActive` (ข้อความ "ฟังต่อเนื่อง" + ไม่ต้องพูด "Friday" ซ้ำ) ยังคงมีความหมายเฉพาะตอน `wakeMode` เปิดจริงเท่านั้น (`followUpActive = wakeMode` ใน `startFollowUpWindow()`) เพราะ text นั้นสื่อว่า STT กำลังฟังต่อเนื่องอยู่จริง ซึ่งเป็นจริงเฉพาะตอน wake mode เปิด
 - **บั๊กจริงที่เจอ**: error handler ของ `recognition.onerror`/`wakeRecognition.onerror` (เช่น ไม่ได้สิทธิ์ไมค์ `not-allowed`) เรียก `addLine('friday', ...)` ตรงๆ โดยไม่ได้ตั้ง `engagedActive = true` ก่อน — ข้อความเลยถูกเพิ่มเข้า DOM จริงแต่ **มองไม่เห็น** (แชทซ่อนอยู่) ผู้ใช้เจอว่า "เรียก Friday แล้วไม่มีอะไรเกิดขึ้นเลย" ทั้งที่จริงๆ FRIDAY พยายามแจ้ง error (เช่นสิทธิ์ไมค์หลุด) อยู่ แค่มองไม่เห็น — แก้โดยเพิ่มฟังก์ชัน `announceSystemNotice(text)` (`engagedActive = true` + `addLine()` + `startFollowUpWindow()`) แล้วเปลี่ยน error handler ทั้งหมดให้เรียกผ่านนี้แทน `addLine()` ตรงๆ — **บทเรียน**: ทุกจุดที่เพิ่มข้อความลง `.log` ต้องเช็คว่าตั้ง `engagedActive` ไว้ก่อนเสมอ ไม่งั้นข้อความจะถูกซ่อนแบบเงียบๆ โดยไม่มี error ให้เห็นเลย
 
+## เข้าถึงไฟล์ในคอม (`list_files()` / `read_file()` / `create_folder()` / `write_file()` / `delete_path()`) + ตำแหน่งที่ตั้ง
+
+ผู้ใช้ขอให้ FRIDAY "เข้าถึงข้อมูลในคอมได้" ชัดเจนว่า**ต้องจำกัดแค่โฟลเดอร์ที่กำหนดไว้เท่านั้น** ไม่ใช่ทั้งเครื่อง — ถามต่อว่าจะเลือกโฟลเดอร์ยังไง ผู้ใช้ตอบว่า "เลือกผ่าน UI เลย" ไม่ใช่พิมพ์ path เอง
+
+**สถาปัตยกรรม — native folder picker ผ่าน server (ไม่ใช่ browser File System Access API):**
+- ปัญหา: เบราว์เซอร์ไม่มีทางให้เว็บเพจรู้ **absolute path จริง** ของโฟลเดอร์ที่ผู้ใช้เลือกได้เลย (ทั้ง `<input type="file" webkitdirectory>` ที่ให้แค่ path ปลอม `C:\fakepath\...` และ `window.showDirectoryPicker()` ที่ให้แค่ handle ใช้อ่านไฟล์ผ่าน JS ได้ แต่ไม่บอก path จริง) — เป็นข้อจำกัดด้าน privacy ของเบราว์เซอร์เอง ไม่ใช่บั๊ก
+- แก้โดยใช้ **`tkinter.filedialog.askdirectory()`** (มากับ Python อยู่แล้ว ไม่ต้องลง lib เพิ่ม) เปิด native "Browse for Folder" dialog ของ **Windows จริงๆ** ผ่าน endpoint ใหม่ `POST /api/browse_folder` ใน `server.py` — ใช้ได้เพราะตอนนี้ server กับเบราว์เซอร์ของผู้ใช้รันอยู่บนเครื่องเดียวกัน **ถ้าย้ายไป Pi ในอนาคตกลไกนี้ใช้ไม่ได้แล้ว** (Pi ไม่มีจอ/ไม่ได้เห็น dialog ที่ popup) ต้องคิดใหม่ตอนนั้น (เช่น list โฟลเดอร์ที่ Pi เข้าถึงได้ให้เลือกจาก dropdown แทน)
+- เป็น blocking call (`askdirectory()` รอ user โต้ตอบ) — ฝั่ง `app.js` disable ปุ่มไว้ระหว่างรอ ไม่กระทบ request อื่นเพราะ FastAPI รัน sync endpoint ผ่าน threadpool คนละ thread กัน
+- ทดสอบแล้วว่า `tkinter.Tk()` สร้าง/ทำลายจาก background thread (จำลอง thread ที่ FastAPI ใช้จริง) ไม่ throw error บน Windows เครื่องนี้ — ส่วนตัว dialog ที่ popup จริงต้องให้ผู้ใช้กดทดสอบเองเพราะ automate ไม่ได้ (ต้องมีคนคลิกจริง)
+- path ที่เลือกเก็บไว้ที่ `_allowed_folder` (ตัวแปร module-level เดียวใน `tools.py` เหมือน state อื่นๆ — personal use คนเดียว)
+- **จำข้าม restart แล้ว**: `set_allowed_folder()` เขียน path ลง `friday-ai/file_access_config.json` (`{"allowed_folder": "..."}`, อยู่ใน `.gitignore` เพราะเป็น absolute path เฉพาะเครื่อง ไม่ใช่ค่าที่ควร commit) — พอ `tools.py` ถูก import ตอน server เริ่ม `_restore_allowed_folder_from_config()` จะอ่านกลับมาให้ **ถ้าโฟลเดอร์นั้นยังมีอยู่จริง** (`os.path.isdir()`); ถ้าโดนลบ/ย้าย/ถอด drive ไปแล้วก็ข้ามเงียบๆ (ผู้ใช้กดปุ่ม 📁 เลือกใหม่ได้) ตอน restore จะเปิด activity log ไฟล์ใหม่ด้วย `action="folder_restored"` (แยกไฟล์ต่อรอบการรัน server เหมือน `folder_selected`) — ปุ่มบนหน้าเว็บอัปเดตเองอยู่แล้วเพราะ `refreshFolderStatus()` ยิง `/api/file_access_status` ทุกครั้งที่โหลดหน้า
+
+**Security — จุดสำคัญที่สุดของ tool ชุดนี้:**
+- ทุก path จาก LLM ต้อง resolve เป็น absolute path จริงก่อน (`os.path.realpath`) แล้วเช็คด้วย **`os.path.commonpath()`** ว่ายังอยู่ใต้ `_allowed_folder` เป๊ะๆ — **ห้ามใช้ `str.startswith()` เทียบ prefix ตรงๆ เด็ดขาด** เพราะมีบั๊กคลาสสิก: โฟลเดอร์ `C:\allowed` จะ match ผิดกับ `C:\allowed-secret` (คนละโฟลเดอร์กันเลยแต่ชื่อขึ้นต้นเหมือนกัน) — ทดสอบสถานการณ์นี้จริงแล้วยืนยันว่า `commonpath()` บล็อกถูกต้อง ส่วน `startswith()` จะหลุด
+- ทดสอบ path traversal (`../`, `../../`) และ absolute path นอกขอบเขตแล้ว บล็อกถูกต้องหมด
+- `read_file()` จำกัดนามสกุลไฟล์ที่อ่านได้แค่ text-based เท่านั้น (`.txt`, `.md`, `.csv`, `.json`, `.py` ฯลฯ ดู `_ALLOWED_TEXT_EXTENSIONS`) กันอ่านไฟล์ไบนารี/รูปภาพ/exe ออกมาเป็นขยะหรือเสี่ยงข้อมูลผิดปกติ และจำกัดขนาดอ่านไว้ที่ `_MAX_FILE_READ_BYTES = 200_000` (~200KB) กันไฟล์ใหญ่บวม context ของ Gemini
+- `list_files()` จำกัดจำนวนรายการที่แสดงไว้ 200 รายการ กันโฟลเดอร์ใหญ่มากตอบยาวเกินไป
+- ก่อนตั้งค่าโฟลเดอร์ (`_allowed_folder` เป็น `None`) ทั้งสอง tool ตอบข้อความบอกให้ไปกดปุ่มเลือกโฟลเดอร์ก่อน ไม่ error ดิบๆ
+
+**UI**: ปุ่ม `📁 เลือกโฟลเดอร์` มุมขวาบน (เหนือ engine-select) โชว์ชื่อโฟลเดอร์ปัจจุบันถ้าตั้งค่าแล้ว (ตัด path เหลือแค่ชื่อโฟลเดอร์สุดท้าย, ดู path เต็มได้จาก tooltip) sync สถานะจริงจาก `/api/file_access_status` ทุกครั้งที่โหลดหน้าเว็บ (ไม่ใช่จำไว้ฝั่ง browser เฉยๆ เพราะ server คือคนตรวจ path จริงตอนถูกเรียกใช้งาน ต้องตรงกับสิ่งที่ server ใช้งานจริงเสมอ)
+
+**เขียน/แก้ไข/ลบไฟล์ (`create_folder()` / `write_file()` / `delete_path()`)** — ต่อยอดจาก `list_files()`/`read_file()` เดิม ใช้ `_resolve_safe_path()` (containment check ด้วย `commonpath()`) ตัวเดียวกันเป๊ะๆ เลยได้ security guarantee เดียวกันฟรีๆ (traversal, sibling-prefix folder ฯลฯ):
+- `write_file(path, content)` **เขียนทับทั้งไฟล์เสมอ** ไม่มีโหมด append/patch บางส่วน — ถ้า LLM จะแก้ไฟล์เดิม docstring สั่งให้ `read_file()` อ่านเนื้อหาเดิมมาก่อนเสมอ แล้วส่งเนื้อหาฉบับเต็มที่แก้แล้วมาเขียนทับ (ไม่ใช่ diff) จำกัดนามสกุลไฟล์ที่เขียนได้ด้วย whitelist เดียวกับ `read_file()` (`_ALLOWED_TEXT_EXTENSIONS`) กันเขียนไฟล์ไบนารี/exe
+- `create_folder(path)` ใช้ `os.makedirs(..., exist_ok=True)` สร้างโฟลเดอร์แม่ที่ยังไม่มีให้อัตโนมัติด้วย
+- `delete_path(path)` **ลบถาวร กู้คืนไม่ได้** (`shutil.rmtree` ถ้าเป็นโฟลเดอร์, `os.remove` ถ้าเป็นไฟล์) — docstring เขียนกำกับชัดว่าห้ามเรียกเองถ้าไม่แน่ใจว่าผู้ใช้ตั้งใจจะลบจริงๆ ให้ถามยืนยันก่อนถ้าคำสั่งกำกวม (ไม่มี confirmation flow แยกต่างหากในโค้ด — docstring คือกลไกคุมพฤติกรรม LLM ตัวเดียวที่มี เหมือน `control_youtube`) และ**ปฏิเสธการลบโฟลเดอร์หลักที่อนุญาตไว้ทั้งก้อนเสมอ** (เทียบ `target == os.path.realpath(_allowed_folder)`) กันลบขอบเขตทั้งหมดทิ้งโดยไม่ตั้งใจ
+- ทดสอบ adversarial ครบชุดเดียวกับของเดิม (traversal, sibling-prefix folder, disallowed extension) บวกเคสใหม่เฉพาะกลุ่มนี้ (ลบไฟล์, ลบโฟลเดอร์ไม่ว่างแบบ recursive, ปฏิเสธลบ root, ลบ path ที่ไม่มีอยู่จริง) รวม 35 เคส ผ่านหมด
+
+**Audit log (JSON)** — ทุกครั้งที่เลือกโฟลเดอร์ใหม่ผ่านปุ่ม 📁 (`set_allowed_folder()` ใน `tools.py`) จะสร้างไฟล์ log ใหม่ **แยกไฟล์ต่อรอบ** ที่ `logs/file_activity_<YYYYMMDD_HHMMSS>.json` (ไม่ทับของเดิม — เลือกโฟลเดอร์ใหม่กี่ครั้งก็มีไฟล์ log สะสมไว้ครบทุกรอบ) แต่ละ entry บันทึก `timestamp`, `action` (`list_files`/`read_file`/`create_folder`/`write_file`/`delete_path`/`folder_selected`), `path`, `success`, `detail` (เหตุผลตอน fail เช่น "outside allowed scope", "disallowed extension .exe") — บันทึกทั้งเคสสำเร็จและล้มเหลว ไม่ใช่แค่ที่ทำสำเร็จ เพื่อให้ตรวจสอบย้อนหลังได้ว่า FRIDAY เคยพยายามทำอะไรบ้าง ไฟล์ log เก็บเป็น array เดียวเขียนทับทั้งไฟล์ทุกครั้งที่มี entry ใหม่ (ไม่ใช่ append แบบ NDJSON) เพราะไฟล์เล็ก (การใช้งานส่วนตัวคนเดียว ไม่ได้ concurrent เขียนพร้อมกันหลาย request) — โฟลเดอร์ `logs/` อยู่ใน `.gitignore` แล้ว ไม่ commit ขึ้น git
+
+## ตำแหน่งที่ตั้ง (geolocation) — `get_weather()` ใช้พิกัดจริงของเบราว์เซอร์
+
+ผู้ใช้ถามอากาศ "ที่นี่"/ไม่ระบุเมือง แล้วต้องไม่ต้องพิมพ์ชื่อเมืองเอง — โครงเดียวกับ folder picker / `_pending_action` เป๊ะ: **ข้อมูล (พิกัด) อยู่ฝั่ง browser แต่ tool รันฝั่ง server** เลยต้องให้ client แนบพิกัดมากับ request
+
+- **`app.js`**: `refreshClientGeo()` เรียก `navigator.geolocation.getCurrentPosition()` (หน่วง 1.2 วิหลังโหลดหน้า กันชน prompt ขอสิทธิ์ไมค์) ปัดพิกัดเหลือ 4 ตำแหน่งทศนิยม (~11 ม. + หยาบลงนิดเรื่อง privacy) เก็บใน `clientGeo = {lat, lon, label}` — `label` ได้จาก **BigDataCloud `reverse-geocode-client`** (ฟรี ไม่ต้อง key ออกแบบมาให้เรียกจาก browser) เรียกไม่สำเร็จ/ผู้ใช้ไม่อนุญาต ก็ปล่อย `null` ได้ ไม่พังอะไร (เซ็ต `lat/lon` ก่อนแล้วค่อยเติม `label` ทีหลัง เผื่อ reverse geocode ค้าง) ทุก `POST /api/chat` แนบ `geo` ไปถ้ามี
+- **บั๊กจริงที่เจอ + วิธีกัน**: เดิม `refreshClientGeo()` รันครั้งเดียวตอนโหลดหน้า ถ้าตอนนั้นสิทธิ์ยังเป็น "prompt" หรือผู้ใช้กดอนุญาตทีหลัง → `clientGeo` ค้างเป็น `null` ตลอด (submit handler เดิม re-fetch เฉพาะตอน `clientGeo` มีค่าแล้ว) ผู้ใช้เจอว่า "อนุญาตในเบราว์เซอร์แล้วแต่ระบบยังบอกเข้าถึงไม่ได้" ต้องรีเฟรชหน้าถึงจะติด — แก้ 4 ทาง: (1) submit handler ขอพิกัดใหม่เมื่อ `!clientGeo` ด้วย (ไม่ใช่แค่ตอนเก่าเกิน 10 นาที) มี rate-limit `GEO_RETRY_MS = 20s` กันยิงทุก submit ตอนโดนปฏิเสธ (2) `navigator.permissions.query({name:'geolocation'})` + ฟัง event `change` → พอสิทธิ์เปลี่ยนเป็น `granted` ดึงพิกัดทันทีไม่ต้องรีเฟรช (3) `visibilitychange` → กลับมาที่แท็บแล้วยังไม่มีพิกัด ลองใหม่ (4) `geoInFlight` guard กัน `getCurrentPosition` ซ้อนกันจากหลายเส้นทาง — ทั้งหมด log เหตุผลที่ล้มเหลว (`err.code`) ลง console (F12) ได้ + เตือนถ้า `!window.isSecureContext` (เปิดผ่าน IP เครื่องในวง LAN แทน `127.0.0.1` → เบราว์เซอร์บล็อก geolocation เงียบๆ)
+- **`server.py`**: `ChatRequest.geo: Optional[dict]` — `chat_endpoint` เรียก `tools.set_client_location(req.geo)` ก่อน `chat.send_message()` แล้วล้างด้วย `None` ใน `finally` **ทุกทางออก** (เหมือน `pop_pending_action`) กันพิกัดเก่าค้างไปโผล่ request ถัดไปที่ไม่ได้ส่ง `geo` มา
+- **`tools.py`**: `set_client_location()` รับเฉพาะ dict ที่ `lat`/`lon` cast เป็น `float` ได้จริง นอกนั้นเป็น `None`. `get_weather(location="")` (เปลี่ยน `location` เป็น optional แล้ว) — ถ้า `location` อยู่ใน `_HERE_ALIASES` (ว่าง/"ที่นี่"/"ปัจจุบัน"/"my location" ฯลฯ): มีพิกัด → ยิง forecast ตรงด้วย lat/lon เลย ข้าม geocoding, `display_name` = `label` ที่ client ส่งมา หรือ `"ตำแหน่งปัจจุบัน"` ถ้าไม่มี; ไม่มีพิกัด → ตอบข้อความบอกให้บอกชื่อเมือง (LLM เอาไปถามผู้ใช้ต่อ) ส่วน path ปกติ (ระบุชื่อเมือง) ยัง geocode เหมือนเดิม
+- refactor: แยกส่วนยิง forecast + ประกอบ `_pending_action` ออกมาเป็น `_build_weather_reply(lat, lon, display_name)` ใช้ร่วมกันทั้ง 2 ทางที่ได้พิกัดมา (จากชื่อเมือง / จาก geolocation)
+- **หลักการ "ห้ามโชว์ข้อมูลปลอม"**: `label` มาจาก reverse geocode พิกัดจริง ถ้าไม่ได้ก็โชว์ `"ตำแหน่งปัจจุบัน"` ตรงๆ (ไม่เดาชื่อเมือง) การ์ดอากาศยังโผล่เฉพาะตอนมีข้อมูล Open-Meteo จริงเหมือนเดิม
+- ยังเป็น global ตัวเดียว (`_client_location`) ไม่ใช่ per-request — ยอมรับได้เพราะ personal use คนเดียว เหมือน `_pending_action`
+
+**Bluetooth**: ผู้ใช้บอกว่ายังไม่ต้องรีบทำตอนนี้ — บันทึกไว้เผื่ออนาคต: เบราว์เซอร์ทำไม่ได้ (Web Bluetooth API จับคู่ทีละเครื่องผ่าน device picker เท่านั้น นับจำนวนอุปกรณ์ที่เชื่อมต่ออยู่ไม่ได้) ถ้าจะทำต้องให้ server (Python) คุย Windows Bluetooth stack ตรงๆ (เช่นผ่าน `bleak` หรือ WMI) ซึ่งจะใช้ได้เฉพาะตอน server รันบนเครื่อง Windows นี้เท่านั้นเหมือนกับปัญหาของ folder picker
+
 ## บุคลิกของ FRIDAY
 
 - **เพศหญิง** — ระบุไว้ชัดใน system prompt ทั้ง `friday.py`/`server.py` ให้ใช้คำลงท้าย/สรรพนามผู้หญิงเสมอ (ค่ะ, ดิฉัน/หนู) และ default เสียง TTS เป็น `th_f_1` (ผู้หญิง)
@@ -220,15 +282,17 @@ friday-ai/
 ├── friday.py         # agent loop แบบ CLI (Step 0, ยังใช้ speechSynthesis ของเบราว์เซอร์ไม่ได้เพราะเป็น CLI)
 ├── server.py         # FastAPI backend — เสิร์ฟหน้าเว็บ + /api/chat + /api/quota + /api/tts
 ├── personality.py    # SYSTEM_PROMPT ที่ friday.py กับ server.py ใช้ร่วมกัน (กันสองไฟล์เพี้ยนไปคนละทาง)
-├── tools.py          # tool ที่ agent เรียกใช้ได้ (search_web ผ่าน ddgs, open_youtube/control_youtube ผ่าน yt-dlp)
+├── tools.py          # tool ที่ agent เรียกใช้ได้ (search_web, open_youtube/control_youtube, get_weather, list_files/read_file/create_folder/write_file/delete_path)
 ├── tts.py            # เสียงพูดไทยฝั่ง server (pythaitts engine vachana, ปรับ noise param แล้ว)
 ├── static/
 │   ├── index.html    # โครง HUD (core, panel มุม 4 มุม, log, input bar, quota readout)
 │   ├── style.css      # ธีม dark cyan + animation, boot sequence, particles, scanline/vignette
 │   └── app.js         # แชท + boot + particles + core เอียงลอยเอง + panel มุม 4 มุมที่ผูกกับข้อมูลจริง + TTS/STT
 ├── voices/            # แคชโมเดลเสียง ONNX ที่ pythaitts โหลดมา (ไม่ commit)
+├── logs/              # audit log กิจกรรมเข้าถึงไฟล์ แยกไฟล์ต่อรอบ (ไม่ commit)
 ├── venv/              # virtualenv (ไม่ commit)
 ├── .env               # GEMINI_API_KEY (ไม่ commit)
+├── file_access_config.json  # จำโฟลเดอร์ที่อนุญาตไว้ข้าม restart — absolute path เฉพาะเครื่อง (ไม่ commit)
 ├── .gitignore
 └── requirements.txt
 ```
