@@ -40,7 +40,7 @@ const folderBtn = document.getElementById('folderBtn');
 
 /* ---------- เสียง (Web Audio, ไม่ต้องมีไฟล์เสียงภายนอก) ---------- */
 
-let muted = localStorage.getItem('friday_muted') === '1';
+let muted = localStorage.getItem('jusmin_muted') === '1';
 let audioCtx = null;
 
 function updateMuteBtn() {
@@ -50,7 +50,7 @@ updateMuteBtn();
 
 muteBtn.addEventListener('click', () => {
   muted = !muted;
-  localStorage.setItem('friday_muted', muted ? '1' : '0');
+  localStorage.setItem('jusmin_muted', muted ? '1' : '0');
   updateMuteBtn();
 });
 
@@ -77,7 +77,7 @@ function beep(freq, duration, type = 'sine', gain = 0.05) {
 const sendBeep = () => beep(880, 0.08, 'sine', 0.04);
 const receiveBeep = () => beep(520, 0.15, 'sine', 0.05);
 
-/* ---------- Text-to-Speech: FRIDAY พูดตอบกลับด้วยเสียงจริงจาก server (PyThaiTTS/vachana) ----------
+/* ---------- Text-to-Speech: จัสมิน พูดตอบกลับด้วยเสียงจริงจาก server (PyThaiTTS/vachana) ----------
    เปลี่ยนจากใช้เสียง browser (speechSynthesis) มาเป็นให้ server สร้างไฟล์เสียงส่งมาเล่นแทน
    เพราะเสียง SAPI ของ Windows ฟังดูหุ่นยนต์เกินไป ทดสอบเทียบเสียงจริงหลายแบบแล้วเลือก engine
    นี้ (ปรับ noise_scale/noise_w_scale ให้จังหวะพูดนิ่งขึ้นด้วย ดู tts.py) */
@@ -89,7 +89,7 @@ const THAI_VOICES = [
   { id: 'th_m_2', label: 'เสียงชาย 2' },
 ];
 
-let selectedVoiceId = localStorage.getItem('friday_voice') || 'th_f_1';
+let selectedVoiceId = localStorage.getItem('jusmin_voice') || 'th_f_1';
 
 function populateVoiceOptions() {
   voiceSelect.innerHTML = '';
@@ -105,12 +105,12 @@ populateVoiceOptions();
 
 voiceSelect.addEventListener('change', () => {
   selectedVoiceId = voiceSelect.value;
-  localStorage.setItem('friday_voice', selectedVoiceId);
+  localStorage.setItem('jusmin_voice', selectedVoiceId);
 });
 
 // engine เสียง: ค่าเริ่มต้น 'google' (Google Translate TTS ตามที่ผู้ใช้ขอ) — สลับกลับไป 'vachana'
 // (เสียงคุณภาพสูงในเครื่อง) ได้จากเมนู "ตั้งค่า" ใน sidebar จำค่าที่เลือกไว้ใน localStorage
-let selectedEngine = localStorage.getItem('friday_tts_engine') || 'google';
+let selectedEngine = localStorage.getItem('jusmin_tts_engine') || 'google';
 
 // Google Translate TTS (ผ่าน gTTS) ไม่มีพารามิเตอร์ปรับความเร็วให้ปรับเหมือน vachana (API ของ
 // Google เองมีแค่ normal/slow ไม่มี "เร็วขึ้น" ให้เลือก) วัดจริงเทียบประโยคเดียวกัน: vachana ~3.66 วิ
@@ -129,7 +129,7 @@ applyEngineUI();
 
 engineSelect.addEventListener('change', () => {
   selectedEngine = engineSelect.value;
-  localStorage.setItem('friday_tts_engine', selectedEngine);
+  localStorage.setItem('jusmin_tts_engine', selectedEngine);
   applyEngineUI();
 });
 
@@ -155,7 +155,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && sidebar.classList.contains('open')) setSidebar(false);
 });
 
-/* ---------- โฟลเดอร์ที่อนุญาตให้ FRIDAY อ่านไฟล์ได้: state จริงจาก server เท่านั้น (ไม่ใช่แค่จำ
+/* ---------- โฟลเดอร์ที่อนุญาตให้ จัสมิน อ่านไฟล์ได้: state จริงจาก server เท่านั้น (ไม่ใช่แค่จำ
    ไว้ฝั่ง browser) เพราะ server เป็นคนตรวจ path จริงตอน list_files()/read_file() ถูกเรียก ต้อง sync
    กับ server เสมอไม่งั้นปุ่มจะโชว์ค่าที่ไม่ตรงกับที่ backend ใช้งานจริงอยู่ (ผิดหลักการ "ห้ามโชว์ข้อมูลปลอม") */
 
@@ -163,11 +163,11 @@ function updateFolderBtnLabel(path) {
   if (path) {
     const name = path.split(/[\\/]/).filter(Boolean).pop() || path;
     folderBtn.textContent = `📁 ${name}`;
-    folderBtn.title = `FRIDAY เข้าถึงไฟล์ได้แค่ในนี้: ${path} (กดเพื่อเปลี่ยน)`;
+    folderBtn.title = `จัสมิน เข้าถึงไฟล์ได้แค่ในนี้: ${path} (กดเพื่อเปลี่ยน)`;
     folderBtn.classList.add('configured');
   } else {
     folderBtn.textContent = '📁 เลือกโฟลเดอร์';
-    folderBtn.title = 'ยังไม่ได้ตั้งค่า — กดเพื่อเลือกโฟลเดอร์ที่ให้ FRIDAY เข้าถึงไฟล์ได้';
+    folderBtn.title = 'ยังไม่ได้ตั้งค่า — กดเพื่อเลือกโฟลเดอร์ที่ให้ จัสมิน เข้าถึงไฟล์ได้';
     folderBtn.classList.remove('configured');
   }
 }
@@ -315,10 +315,10 @@ function ensureTtsAnalyser() {
   }
 }
 
-// ลดเสียงเพลง YouTube ลงชั่วคราวตอน FRIDAY พูด (เดิมเล่นทับกันเลย ฟังไม่รู้เรื่อง — ดู CLAUDE.md)
+// ลดเสียงเพลง YouTube ลงชั่วคราวตอน จัสมิน พูด (เดิมเล่นทับกันเลย ฟังไม่รู้เรื่อง — ดู CLAUDE.md)
 // setVolume() เป็นของ YT.Player เอง ปลอดภัยเรียกได้แม้ตอนยังไม่มี player (เช็ค guard ไว้แล้ว)
 // restoreYoutubeVolume() ต้องกลับไปที่ ytVolume (ค่าที่ผู้ใช้ตั้งไว้ล่าสุดผ่านคำสั่ง volume_up/down)
-// ไม่ใช่ค่าคงที่ 100 เสมอ ไม่งั้นถ้าผู้ใช้เคยหรี่เสียงไว้ พอ FRIDAY พูดจบเสียงจะดังกลับไป 100% เอง
+// ไม่ใช่ค่าคงที่ 100 เสมอ ไม่งั้นถ้าผู้ใช้เคยหรี่เสียงไว้ พอ จัสมิน พูดจบเสียงจะดังกลับไป 100% เอง
 // เช็ค ytPlayerReady ด้วยเสมอ (ไม่ใช่แค่ ytPlayer !== null) เพราะเมธอดของ YT.Player ใช้งานจริงไม่ได้
 // ก่อน onReady แม้ตัว object จะถูกสร้างมาแล้วก็ตาม (ดูหมายเหตุที่ประกาศตัวแปรด้านบน) ถ้าไม่ ready
 // ปล่อยผ่านเฉยๆ ได้ ไม่ต้องคิวรอเหมือน controlYoutube เพราะรอบพูดถัดไปจะ duck/restore ใหม่ให้เองอยู่แล้ว
@@ -332,7 +332,7 @@ function restoreYoutubeVolume() {
 
 ttsAudio.addEventListener('play', () => {
   ttsSpeaking = true;
-  pauseWakeListening(); // ปิดไมค์จริงๆ ตอน FRIDAY พูด กัน STT หยิบเสียงตัวเองมาตีความ
+  pauseWakeListening(); // ปิดไมค์จริงๆ ตอน จัสมิน พูด กัน STT หยิบเสียงตัวเองมาตีความ
   duckYoutubeVolume();
 });
 ttsAudio.addEventListener('ended', () => {
@@ -427,13 +427,13 @@ function isMicOpen() {
 function renderWaveRing() {
   requestAnimationFrame(renderWaveRing);
 
-  // สีเขียว = engagedActive: เริ่มทันทีที่ได้ยินคำว่า "Friday" (ครอบคลุมช่วงประมวลผล+ตอบด้วย)
-  // แล้วค้างไว้จนกว่าจะเงียบครบ 15 วิหลังตอบเสร็จจริงๆ ถึงจะกลับสีเดิม (ต้องเรียก "Friday" ใหม่)
+  // สีเขียว = engagedActive: เริ่มทันทีที่ได้ยินคำว่า "จัสมิน" (ครอบคลุมช่วงประมวลผล+ตอบด้วย)
+  // แล้วค้างไว้จนกว่าจะเงียบครบ 15 วิหลังตอบเสร็จจริงๆ ถึงจะกลับสีเดิม (ต้องเรียก "จัสมิน" ใหม่)
   coreWrap.classList.toggle('mic-listening', engagedActive);
-  // แชท: โชว์เฉพาะตอนกำลังเรียก/ใช้งาน FRIDAY อยู่จริง (engagedActive) ส่วน :hover คุมเองด้วย CSS แล้ว
+  // แชท: โชว์เฉพาะตอนกำลังเรียก/ใช้งาน จัสมิน อยู่จริง (engagedActive) ส่วน :hover คุมเองด้วย CSS แล้ว
   log.classList.toggle('chat-active', engagedActive);
 
-  // YouTube เต็มจออยู่แล้วผู้ใช้เพิ่งเรียก Friday (engagedActive ขึ้นขอบ) -> ย่อจอชั่วคราวให้เห็น HUD หลัก
+  // YouTube เต็มจออยู่แล้วผู้ใช้เพิ่งเรียก จัสมิน (engagedActive ขึ้นขอบ) -> ย่อจอชั่วคราวให้เห็น HUD หลัก
   // เต็มรูปแบบ (เวฟ/สี/แชท เหมือนหน้าหลักเป๊ะ) — พอคุยจบ + เงียบครบ 15 วิ (expireFollowUpWindow) กลับไปเต็มจอเอง
   if (engagedActive && !prevEngagedActive && ytMaximized) {
     exitYoutubeFullscreen();          // เคลียร์ ytWasMaximizedBeforeEngage ด้วย
@@ -545,9 +545,10 @@ if (SpeechRecognitionCtor) {
   wakeBtn.title = 'เบราว์เซอร์นี้ไม่รองรับการพูด ลองใช้ Chrome หรือ Edge';
 }
 
-/* ---------- โหมดฟังตลอด: พูด "Friday" แล้วตามด้วยคำสั่งได้เลย ---------- */
+/* ---------- โหมดฟังตลอด: พูด "จัสมิน" แล้วตามด้วยคำสั่งได้เลย ---------- */
 
-const WAKE_WORD_PATTERNS = [/friday/i, /เฟรดเดย์/i, /เฟรเดย์/i, /ฟรายเดย์/i, /ไฟรเดย์/i];
+// จับได้ทั้งที่ Google STT ถอดเป็นอังกฤษ (jusmin/jasmine/yasmin) และไทยหลายสะกด (จัสมิน/จัสมีน/แจสมิน/จาสมิน)
+const WAKE_WORD_PATTERNS = [/jusmin/i, /jasmin(e)?/i, /yasmin(e)?/i, /จั?[สด]ม[ีิ]น/, /แจ[สด]ม[ีิ]น/, /จาส?ม[ีิ]น/];
 
 // เรียกชื่อเฉยๆ ไม่มีคำสั่งตาม - ตอบรับสั้นๆ ด้วยเสียงจริง สุ่มสลับไว้กันซ้ำจำเจ
 const WAKE_ACK_PHRASES = ['ค่ะ มีอะไรให้ช่วยคะ', 'ว่าไงคะบอส', 'ฟังอยู่ค่ะ', 'คะ พร้อมค่ะ'];
@@ -570,20 +571,20 @@ let wakeRestartTimer = null;
 // ดูหมายเหตุที่ onend ข้างล่าง) เก็บเป็นค่าน้อยที่สุดเท่าที่พอกันชนได้ กันไมค์ "หูหนวก" นานเกินจำเป็น
 const WAKE_RESTART_DELAY_MS = 30;
 
-// ช่วงคุยต่อเนื่องหลัง FRIDAY ตอบ: ไม่ต้องพูด "Friday" ซ้ำใน 15 วิถัดไป
+// ช่วงคุยต่อเนื่องหลัง จัสมิน ตอบ: ไม่ต้องพูด "จัสมิน" ซ้ำใน 15 วิถัดไป
 const FOLLOWUP_MS = 15000;
 const FOLLOWUP_STATUS_TEXT = 'STANDBY · ฟังต่อเนื่อง';
 let followUpActive = false;
 let followUpTimer = null;
 
 // engagedActive คุมสีเขียว (core/wave/glow) กว้างกว่า followUpActive: เริ่มทันทีตั้งแต่ได้ยินคำว่า
-// "Friday" (ครอบคลุมช่วงกำลังประมวลผล + กำลังตอบด้วย) แล้วค่อยนับ 15 วิถอยหลังหลังตอบเสร็จจริงๆ
+// "จัสมิน" (ครอบคลุมช่วงกำลังประมวลผล + กำลังตอบด้วย) แล้วค่อยนับ 15 วิถอยหลังหลังตอบเสร็จจริงๆ
 // ถึงจะกลับเป็นสีเดิม ไม่ใช่แค่ตอนเข้าสู่ช่วง follow-up เท่านั้น
 let engagedActive = false;
 let prevEngagedActive = false; // ใช้จับ rising edge ของ engagedActive ใน renderWaveRing (ย่อจอ YouTube ตอนถูกเรียก)
 
 // เรียกได้ทั้งตอนคุยผ่านเสียง (wake mode) และพิมพ์/กดพูดแบบธรรมดา — engagedActive ใช้คุม
-// สีเขียว + การโชว์แชทเหมือนกันหมด ส่วนข้อความ "ฟังต่อเนื่อง"/ไม่ต้องพูด "Friday" ซ้ำ (followUpActive)
+// สีเขียว + การโชว์แชทเหมือนกันหมด ส่วนข้อความ "ฟังต่อเนื่อง"/ไม่ต้องพูด "จัสมิน" ซ้ำ (followUpActive)
 // มีความหมายเฉพาะตอน wake mode เปิดอยู่จริงเท่านั้น (ตอนนั้นถึงจะมี STT ฟังอยู่จริง)
 function startFollowUpWindow() {
   clearTimeout(followUpTimer);
@@ -593,13 +594,13 @@ function startFollowUpWindow() {
   followUpTimer = setTimeout(expireFollowUpWindow, FOLLOWUP_MS);
 }
 
-// เรียกตอนเงียบเกิน 15 วิจริงๆ เท่านั้น -> ถือว่าเลิกคุยแล้ว กลับสีเดิม ต้องเรียก "Friday" ใหม่
+// เรียกตอนเงียบเกิน 15 วิจริงๆ เท่านั้น -> ถือว่าเลิกคุยแล้ว กลับสีเดิม ต้องเรียก "จัสมิน" ใหม่
 function expireFollowUpWindow() {
   clearTimeout(followUpTimer);
   followUpActive = false;
   engagedActive = false;
   if (status.textContent === FOLLOWUP_STATUS_TEXT) status.textContent = 'STANDBY';
-  // คุยกับ Friday จบแล้ว (พูดจบ + เงียบครบ 15 วิ ไม่มีถามต่อ) — ถ้าเมื่อกี้ย่อจอ YouTube ไว้เพราะโดนเรียก
+  // คุยกับ จัสมิน จบแล้ว (พูดจบ + เงียบครบ 15 วิ ไม่มีถามต่อ) — ถ้าเมื่อกี้ย่อจอ YouTube ไว้เพราะโดนเรียก
   // ให้กลับไปเต็มจอเหมือนเดิม (เว้นแต่เพลงถูกปิดไปแล้ว — เช็คจาก .visible)
   if (ytWasMaximizedBeforeEngage) {
     ytWasMaximizedBeforeEngage = false;
@@ -620,7 +621,7 @@ function consumeFollowUpWindow() {
 const COMMAND_DEBOUNCE_MS = 5000;
 let pendingCommandText = '';
 let commandDebounceTimer = null;
-let isAccumulatingCommand = false; // true ระหว่างรอ debounce — ให้พูดต่อได้โดยไม่ต้องพูด "Friday" ซ้ำ
+let isAccumulatingCommand = false; // true ระหว่างรอ debounce — ให้พูดต่อได้โดยไม่ต้องพูด "จัสมิน" ซ้ำ
 
 function queueWakeCommand(text) {
   pendingCommandText = pendingCommandText ? `${pendingCommandText} ${text}` : text;
@@ -642,7 +643,7 @@ function flushWakeCommand() {
   form.requestSubmit();
 }
 
-// ปิดไมค์จริงๆ ตอน FRIDAY พูด (ไม่ใช่แค่เช็ค flag) กัน STT หยิบเสียงตัวเองมาตีความ
+// ปิดไมค์จริงๆ ตอน จัสมิน พูด (ไม่ใช่แค่เช็ค flag) กัน STT หยิบเสียงตัวเองมาตีความ
 // ข้อแลกเปลี่ยน: แทรกกลางประโยคไม่ได้ ต้องรอพูดจบก่อน — เคยลองแบบเทียบข้อความเสียงสะท้อนโดยไม่ปิดไมค์
 // (ไม่ต้องรอ TTS จบ แทรกได้ทันที) แต่ไม่น่าเชื่อถือพอในสถานการณ์จริง เพราะ STT แปลงเสียงสะท้อนออกมาเพี้ยนบ่อย
 // แผนในอนาคต: ใช้ getUserMedia({echoCancellation:true}) + STT backend จริง (เช่น Whisper) แทน
@@ -683,38 +684,38 @@ function runWakeRecognition() {
     if (!transcript) return;
 
     // ระหว่างเพลง YouTube กำลังเล่นอยู่จริง (state จริงจาก YT.Player ไม่ใช่เดาเอง) ห้ามข้ามการพูด
-    // "Friday" นำแม้จะอยู่ในช่วงคุยต่อเนื่อง/กำลังรอฟังต่อก็ตาม กันเนื้อเพลง/เสียงร้องถูกตีความเป็น
-    // คำสั่งมั่วๆ — ปล่อยให้ตกไปเช็ค extractWakeCommand() ข้างล่างแทน ต้องมีคำว่า "Friday" อยู่จริง
+    // "จัสมิน" นำแม้จะอยู่ในช่วงคุยต่อเนื่อง/กำลังรอฟังต่อก็ตาม กันเนื้อเพลง/เสียงร้องถูกตีความเป็น
+    // คำสั่งมั่วๆ — ปล่อยให้ตกไปเช็ค extractWakeCommand() ข้างล่างแทน ต้องมีคำว่า "จัสมิน" อยู่จริง
     if ((followUpActive || isAccumulatingCommand) && !ytIsPlaying) {
       // อยู่ในช่วงคุยต่อเนื่อง หรือกำลังรอ debounce 5 วิเผื่อพูดต่ออยู่ พูดอะไรมาก็ถือเป็นส่วนหนึ่งของ
-      // คำสั่งเดิมเลย ไม่ต้องพูด "Friday" ซ้ำ — queueWakeCommand() เอง (ไม่ส่งทันที รอ 5 วิเผื่อพูดต่อ)
+      // คำสั่งเดิมเลย ไม่ต้องพูด "จัสมิน" ซ้ำ — queueWakeCommand() เอง (ไม่ส่งทันที รอ 5 วิเผื่อพูดต่อ)
       queueWakeCommand(transcript);
       return;
     }
 
     const command = extractWakeCommand(transcript);
     if (command === null) {
-      // เก็บ log ไว้เผื่อ debug กรณี "พูด Friday แล้วไม่ติด" — บางทีสาเหตุคือ Google STT ถอดเสียง
-      // "Friday" เป็นคำไทยที่สะกดต่างจาก WAKE_WORD_PATTERNS ที่มี ไม่ใช่ปัญหาจังหวะ/ไมค์เลย
+      // เก็บ log ไว้เผื่อ debug กรณี "พูด จัสมิน แล้วไม่ติด" — บางทีสาเหตุคือ Google STT ถอดเสียง
+      // "จัสมิน" เป็นคำไทยที่สะกดต่างจาก WAKE_WORD_PATTERNS ที่มี ไม่ใช่ปัญหาจังหวะ/ไมค์เลย
       // เปิด DevTools console (F12) ดู "[wake] missed:" เทียบว่า STT ได้ยินเป็นคำว่าอะไรจริงๆ
       console.debug('[wake] missed:', transcript);
-      return; // ไม่มีคำว่า Friday ในประโยคนี้ ข้ามไป
+      return; // ไม่มีคำว่า จัสมิน ในประโยคนี้ ข้ามไป
     }
     if (!command) {
       // เรียกชื่อเฉยๆ ไม่มีคำสั่งตาม -> ตอบรับด้วยเสียงจริง พอตอบเสร็จ (ไมค์เปิดกลับมาเอง) ค่อยรอฟังคำถามต่อ
-      // โดยไม่ต้องพูด "Friday" ซ้ำ (ใช้กลไกช่วงคุยต่อเนื่องเดิม)
+      // โดยไม่ต้องพูด "จัสมิน" ซ้ำ (ใช้กลไกช่วงคุยต่อเนื่องเดิม)
       // นับ 15 วิ "หลังเสียงพูดหยุดจริง" (ผ่าน callback ตอน speak() จบ) ไม่ใช่นับตั้งแต่เริ่มพูด
       // ไม่งั้นถ้าประโยคยาวจะโดนกินเวลาไปตั้งแต่ตอนยังพูดไม่จบ
-      engagedActive = true; // ได้ยินคำว่า "Friday" แล้ว เขียวทันที ไม่ต้องรอพูดจบ
+      engagedActive = true; // ได้ยินคำว่า "จัสมิน" แล้ว เขียวทันที ไม่ต้องรอพูดจบ
       const ack = WAKE_ACK_PHRASES[Math.floor(Math.random() * WAKE_ACK_PHRASES.length)];
-      addLine('friday', ack);
+      addLine('jusmin', ack);
       speak(ack, () => {
         if (wakeMode) startFollowUpWindow();
       });
       return;
     }
-    // ได้ยินคำว่า "Friday" + คำสั่งแล้ว — ยังไม่ส่งทันที รอ 5 วิเผื่อพูดต่อ (queueWakeCommand ตั้ง
-    // engagedActive/isAccumulatingCommand ให้เองแล้ว พูดต่อโดยไม่ต้องพูด "Friday" ซ้ำได้เลยในช่วงนี้)
+    // ได้ยินคำว่า "จัสมิน" + คำสั่งแล้ว — ยังไม่ส่งทันที รอ 5 วิเผื่อพูดต่อ (queueWakeCommand ตั้ง
+    // engagedActive/isAccumulatingCommand ให้เองแล้ว พูดต่อโดยไม่ต้องพูด "จัสมิน" ซ้ำได้เลยในช่วงนี้)
     queueWakeCommand(command);
   };
 
@@ -731,7 +732,7 @@ function runWakeRecognition() {
       // เดิมหน่วง 250ms ก่อน restart — Chrome ตัดจบ session ของ continuous:true เองเป็นระยะแม้ไม่มี
       // error เลย (พฤติกรรมปกติของ Web Speech API ไม่ใช่แค่ตอน error) รอบ restart แบบนี้เลยเกิดขึ้น
       // บ่อยมากตอนใช้งานจริง ไม่ใช่กรณีพิเศษ — ช่วง 250ms ที่ไมค์ "หูหนวก" สนิทนี้แหละคือสาเหตุที่
-      // พูด "Friday" คำเดียว (สั้นแค่ ~300-500ms) แล้วบางทีไม่ติดเลย เพราะจังหวะพูดดันตรงกับช่วงรีสตาร์ท
+      // พูด "จัสมิน" คำเดียว (สั้นแค่ ~300-500ms) แล้วบางทีไม่ติดเลย เพราะจังหวะพูดดันตรงกับช่วงรีสตาร์ท
       // พอดี — ลดเหลือ RESTART_DELAY_MS สั้นลงมากเพื่อลดโอกาสพลาดแบบนี้ (ยังเหลือกันชนเล็กน้อยกัน
       // Chrome โยน "recognition already started" ถ้า start() ใหม่เร็วเกินไปก่อน browser คืนทรัพยากรไมค์)
       wakeRestartTimer = setTimeout(runWakeRecognition, WAKE_RESTART_DELAY_MS);
@@ -783,7 +784,7 @@ if (SpeechRecognitionCtor) {
 /* ---------- boot sequence ---------- */
 
 const BOOT_LINES = [
-  '> INITIALIZING F.R.I.D.A.Y CORE...',
+  '> INITIALIZING J.U.S.M.I.N CORE...',
   '> LOADING NEURAL MODULES........ OK',
   '> CONNECTING GEMINI LINK......... OK',
   '> SEARCH MODULE.................. OK',
@@ -979,7 +980,7 @@ function openUrlWithFallback(url) {
 
 function addLinkLine(url) {
   const div = document.createElement('div');
-  div.className = 'friday-link';
+  div.className = 'jusmin-link';
   const a = document.createElement('a');
   a.href = url;
   a.target = '_blank';
@@ -1066,8 +1067,8 @@ function onYtPlayerReady() {
 }
 
 // ตอนเพลงเล่นอยู่จริง (state จริงจาก YouTube เอง ไม่ใช่เดาเอง) ระงับช่วงคุยต่อเนื่อง 15 วิ
-// (ที่ปกติไม่ต้องพูด "Friday" ซ้ำ) ไปก่อน กันเสียงร้อง/เนื้อเพลงถูกตีความเป็นคำสั่งมั่วๆ ดู
-// เงื่อนไข !ytIsPlaying ใน wakeRecognition.onresult — ต้องพูด "Friday" นำทุกครั้งระหว่างเพลงเล่นอยู่
+// (ที่ปกติไม่ต้องพูด "จัสมิน" ซ้ำ) ไปก่อน กันเสียงร้อง/เนื้อเพลงถูกตีความเป็นคำสั่งมั่วๆ ดู
+// เงื่อนไข !ytIsPlaying ใน wakeRecognition.onresult — ต้องพูด "จัสมิน" นำทุกครั้งระหว่างเพลงเล่นอยู่
 function onYtStateChange(event) {
   ytIsPlaying = event.data === YT.PlayerState.PLAYING;
 }
@@ -1095,8 +1096,8 @@ function controlYoutube(action) {
   } else if (action === 'volume_up' || action === 'volume_down') {
     const delta = action === 'volume_up' ? YT_VOLUME_STEP : -YT_VOLUME_STEP;
     ytVolume = Math.max(0, Math.min(100, ytVolume + delta));
-    // ถ้า FRIDAY กำลังพูดอยู่ (duck ค้างที่ YT_DUCK_VOLUME) อย่าเพิ่งใช้ค่าใหม่ทับตอนนี้ กันเสียงเพลง
-    // ดังแทรกขึ้นมากลางที่ FRIDAY พูดอยู่ — เก็บ ytVolume ไว้ก่อน พอ TTS จบ restoreYoutubeVolume()
+    // ถ้า จัสมิน กำลังพูดอยู่ (duck ค้างที่ YT_DUCK_VOLUME) อย่าเพิ่งใช้ค่าใหม่ทับตอนนี้ กันเสียงเพลง
+    // ดังแทรกขึ้นมากลางที่ จัสมิน พูดอยู่ — เก็บ ytVolume ไว้ก่อน พอ TTS จบ restoreYoutubeVolume()
     // จะหยิบค่าล่าสุดไปใช้เอง
     if (!ttsSpeaking) restoreYoutubeVolume();
   } else if (action === 'fullscreen') {
@@ -1112,7 +1113,7 @@ function controlYoutube(action) {
    ด้วยเพื่อซ่อนแถบเบราว์เซอร์ — ไม่ได้ก็ไม่เป็นไร CSS ทำให้เต็มจอเบราว์เซอร์ไปแล้ว */
 
 let ytMaximized = false;
-let ytWasMaximizedBeforeEngage = false; // ย่อจอชั่วคราวเพราะผู้ใช้เรียก Friday -> กลับไปเต็มจอตอนคุยจบ (expireFollowUpWindow)
+let ytWasMaximizedBeforeEngage = false; // ย่อจอชั่วคราวเพราะผู้ใช้เรียก จัสมิน -> กลับไปเต็มจอตอนคุยจบ (expireFollowUpWindow)
 
 function ytFullscreenTarget() {
   if (ytPlayer && typeof ytPlayer.getIframe === 'function') {
@@ -1169,7 +1170,7 @@ document.addEventListener('fullscreenchange', () => {
 
 const WEATHER_DAY_NAMES = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
 
-// ปิด panel เองอัตโนมัติ 30 วิ "หลัง FRIDAY พูดตอบจบจริง" (ไม่ใช่หลังได้ข้อมูลมา) ผู้ใช้ขอไว้ — เรียก
+// ปิด panel เองอัตโนมัติ 30 วิ "หลัง จัสมิน พูดตอบจบจริง" (ไม่ใช่หลังได้ข้อมูลมา) ผู้ใช้ขอไว้ — เรียก
 // scheduleWeatherHide() จาก onDone callback ของ speak() เดียวกับที่คุมช่วงคุยต่อเนื่อง 15 วิ ตรงกับ
 // pattern เดิมของโปรเจกต์ (นับเวลาจากเสียงพูดหยุดจริง ไม่ใช่จากตอนได้คำตอบมา)
 const WEATHER_AUTO_HIDE_MS = 30000;
@@ -1279,7 +1280,7 @@ function showWeather(data) {
 function addLine(cls, text) {
   const div = document.createElement('div');
   div.className = cls;
-  if (cls === 'friday') {
+  if (cls === 'jusmin') {
     typeText(div, text);
   } else {
     div.textContent = text;
@@ -1292,10 +1293,10 @@ function addLine(cls, text) {
 // ใช้กับข้อความสำคัญที่ยิงมาจาก error handler (เช่น ไม่ได้สิทธิ์ไมค์, service ล่ม) ซึ่งไม่ได้เกิดจาก
 // การคุยปกติที่ engagedActive จะถูกตั้งไว้ก่อนหน้าอยู่แล้ว — ถ้าใช้ addLine() ตรงๆ ข้อความจะถูกเพิ่มเข้า
 // DOM จริงแต่ "มองไม่เห็น" เพราะแชทซ่อนอยู่เป็นค่าเริ่มต้น (ดู .log ใน style.css) ผู้ใช้เลยรู้สึกเหมือน
-// "ไม่มีอะไรเกิดขึ้นเลย" ทั้งที่ FRIDAY พยายามแจ้งเตือนแล้วจริงๆ (นี่คือบั๊กจริงที่เจอ)
+// "ไม่มีอะไรเกิดขึ้นเลย" ทั้งที่ จัสมิน พยายามแจ้งเตือนแล้วจริงๆ (นี่คือบั๊กจริงที่เจอ)
 function announceSystemNotice(text) {
   engagedActive = true;
-  addLine('friday', text);
+  addLine('jusmin', text);
   startFollowUpWindow();
 }
 
@@ -1373,7 +1374,7 @@ form.addEventListener('submit', async (e) => {
   const message = input.value.trim();
   if (!message) return;
 
-  engagedActive = true; // กำลังใช้งาน friday อยู่จริง (พิมพ์/กดพูด/สั่งผ่าน wake mode) โชว์แชท+เขียวไว้ก่อน
+  engagedActive = true; // กำลังใช้งาน จัสมิน อยู่จริง (พิมพ์/กดพูด/สั่งผ่าน wake mode) โชว์แชท+เขียวไว้ก่อน
   addLine('you', message);
   input.value = '';
   setThinking(true);
@@ -1393,7 +1394,7 @@ form.addEventListener('submit', async (e) => {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     recordLatency(performance.now() - t0);
-    addLine('friday', data.reply);
+    addLine('jusmin', data.reply);
     receiveBeep();
     // เปิดก่อน speak() เสมอ (ไม่รอ TTS โหลด/เล่นจบ) เพราะ browser อนุญาต window.open() แบบไม่โดน
     // popup blocker ได้แค่ช่วงสั้นๆ หลัง user gesture (transient activation) รอ TTS ก่อนมักเลยเวลานั้นไปแล้ว
@@ -1415,7 +1416,7 @@ form.addEventListener('submit', async (e) => {
       if (wasWeatherShown) scheduleWeatherHide();
     });
   } catch (err) {
-    addLine('friday', `เชื่อมต่อไม่ได้: ${err.message}`);
+    addLine('jusmin', `เชื่อมต่อไม่ได้: ${err.message}`);
     startFollowUpWindow(); // ให้เวลาอ่าน error สักพักก่อนแชทจะหายไปเอง แทนที่จะค้าง engagedActive ตลอดไป
   } finally {
     setThinking(false);

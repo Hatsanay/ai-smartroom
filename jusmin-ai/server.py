@@ -205,7 +205,7 @@ def browse_folder_endpoint() -> FolderStatus:
     root.withdraw()
     root.attributes("-topmost", True)
     try:
-        selected = filedialog.askdirectory(title="เลือกโฟลเดอร์ที่ให้ FRIDAY เข้าถึงไฟล์ได้")
+        selected = filedialog.askdirectory(title="เลือกโฟลเดอร์ที่ให้จัสมินเข้าถึงไฟล์ได้")
     finally:
         root.destroy()
 

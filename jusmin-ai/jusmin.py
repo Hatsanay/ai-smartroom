@@ -14,7 +14,7 @@ MODEL_NAME = "gemini-3.5-flash-lite"
 
 
 def main():
-    print("⚡ FRIDAY พร้อมทำงาน (พิมพ์ 'exit' หรือ 'quit' เพื่อออก)\n")
+    print("⚡ จัสมิน พร้อมทำงาน (พิมพ์ 'exit' หรือ 'quit' เพื่อออก)\n")
 
     # chats.create เก็บประวัติให้อัตโนมัติ -> จำบริบทเดิมได้
     chat = client.chats.create(
@@ -40,7 +40,7 @@ def main():
 
         try:
             response = chat.send_message(user_input)
-            print(f"FRIDAY: {strip_markdown(response.text)}\n")
+            print(f"จัสมิน: {strip_markdown(response.text)}\n")
         except Exception as e:
             print(f"⚠️  เกิดข้อผิดพลาด: {e}\n")
 

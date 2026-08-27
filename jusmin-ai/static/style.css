@@ -896,7 +896,7 @@ iframe:-webkit-full-screen { width: 100% !important; height: 100% !important; }
   font-size: 13px;
   line-height: 1.6;
   padding-right: 4px;
-  /* ซ่อนแชทไว้เป็นค่าเริ่มต้น โชว์เฉพาะตอนกำลังเรียก/คุยกับ FRIDAY จริง (.chat-active คุมจาก engagedActive
+  /* ซ่อนแชทไว้เป็นค่าเริ่มต้น โชว์เฉพาะตอนกำลังเรียก/คุยกับ จัสมิน จริง (.chat-active คุมจาก engagedActive
      ใน app.js) หรือตอนเอาเมาส์ไปชี้ดู (:hover) — ไม่ใช้ pointer-events:none เพราะจะทำให้ :hover ตรวจจับไม่ได้ */
   opacity: 0;
   transition: opacity 0.35s ease;
@@ -910,12 +910,12 @@ iframe:-webkit-full-screen { width: 100% !important; height: 100% !important; }
 
 .log .you { color: #9df; opacity: 0.75; }
 .log .you::before { content: '> '; }
-.log .friday { color: var(--cyan); text-shadow: 0 0 4px rgba(77,246,255,0.5); margin-bottom: 10px; display: block; }
-.log .friday::before { content: 'FRIDAY  '; color: var(--cyan-dim); }
+.log .jusmin { color: var(--cyan); text-shadow: 0 0 4px rgba(77,246,255,0.5); margin-bottom: 10px; display: block; }
+.log .jusmin::before { content: 'JUSMIN  '; color: var(--cyan-dim); }
 
-.log .friday-link { margin-bottom: 10px; }
-.log .friday-link a { color: var(--cyan); text-decoration: underline; cursor: pointer; }
-.log .friday-link a:hover { color: #fff; }
+.log .jusmin-link { margin-bottom: 10px; }
+.log .jusmin-link a { color: var(--cyan); text-decoration: underline; cursor: pointer; }
+.log .jusmin-link a:hover { color: #fff; }
 
 .typing-cursor {
   display: inline-block;

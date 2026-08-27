@@ -1,3 +1,3 @@
-cd D:\project\ai-smartroom\friday-ai
+cd D:\project\ai-smartroom\jusmin-ai
 venv\Scripts\activate
 python server.py

@@ -1,10 +1,10 @@
-FRIDAY — AI Assistant Project
+Jusmin — AI Assistant Project
 ==============================
 
-โปรเจกต์ AI ผู้ช่วยส่วนตัวสไตล์ Jarvis ชื่อ FRIDAY คุยตอบคำถามได้ ค้นเว็บได้ เปิด/คุมเพลง YouTube
-ได้ เช็คสภาพอากาศได้ พร้อมหน้าเว็บ HUD ที่ฟัง/พูดเป็นภาษาไทยได้จริง (wake word "Friday")
+โปรเจกต์ AI ผู้ช่วยส่วนตัวสไตล์ Jarvis ชื่อ Jusmin คุยตอบคำถามได้ ค้นเว็บได้ เปิด/คุมเพลง YouTube
+ได้ เช็คสภาพอากาศได้ พร้อมหน้าเว็บ HUD ที่ฟัง/พูดเป็นภาษาไทยได้จริง (wake word "จัสมิน")
 
-โปรเจกต์หลักอยู่ในโฟลเดอร์ friday-ai/ ทุกคำสั่งด้านล่างให้รันจากในโฟลเดอร์นั้น
+โปรเจกต์หลักอยู่ในโฟลเดอร์ jusmin-ai/ ทุกคำสั่งด้านล่างให้รันจากในโฟลเดอร์นั้น
 
 
 ต้องมีก่อนเริ่ม
@@ -16,7 +16,7 @@ FRIDAY — AI Assistant Project
 วิธีติดตั้งหลังโคลนโปรเจกต์
 -----------------------------
 1. เข้าไปที่โฟลเดอร์โปรเจกต์
-     cd friday-ai
+     cd jusmin-ai
 
 2. สร้าง virtual environment
      python -m venv venv
@@ -28,7 +28,7 @@ FRIDAY — AI Assistant Project
 4. ติดตั้ง dependency ทั้งหมด
      pip install -r requirements.txt
 
-5. สร้างไฟล์ .env ในโฟลเดอร์ friday-ai/ (โฟลเดอร์เดียวกับ server.py) ใส่ Gemini API key ของตัวเอง
+5. สร้างไฟล์ .env ในโฟลเดอร์ jusmin-ai/ (โฟลเดอร์เดียวกับ server.py) ใส่ Gemini API key ของตัวเอง
      GEMINI_API_KEY=ใส่คีย์ของคุณตรงนี้
 
    ไฟล์นี้ต้องสร้างเองเสมอ — ไม่ได้อยู่ใน repo (อยู่ใน .gitignore ไว้เพราะมี key จริง) ถ้าไม่สร้าง
@@ -43,7 +43,7 @@ FRIDAY — AI Assistant Project
      http://127.0.0.1:8000/
 
 แบบ CLI (คุยผ่าน terminal เฉยๆ พิมพ์อย่างเดียว ไม่มีเสียง เหมาะเทสเร็วๆ):
-     python friday.py
+     python jusmin.py
    พิมพ์ 'exit' หรือ 'quit' เพื่อออก
 
 
@@ -53,6 +53,6 @@ FRIDAY — AI Assistant Project
   (ดาวน์โหลดแค่ครั้งแรกครั้งเดียว รอบต่อไปเร็วปกติ)
 - แก้โค้ด (server.py, tools.py, tts.py ฯลฯ) แล้วต้อง restart server เอง (กด Ctrl+C แล้วรัน
   python server.py ใหม่) ไม่มี auto-reload
-- หน้าเว็บจะเปิดโหมด "ฟังตลอด" (wake word พูดคำว่า "Friday") เป็นค่าเริ่มต้นทันที เบราว์เซอร์จะขอ
+- หน้าเว็บจะเปิดโหมด "ฟังตลอด" (wake word พูดคำว่า "จัสมิน") เป็นค่าเริ่มต้นทันที เบราว์เซอร์จะขอ
   สิทธิ์ไมโครโฟนเอง
-- รายละเอียดสถาปัตยกรรม เหตุผลการออกแบบ และ decision ต่างๆ ทั้งหมดอยู่ใน friday-ai/CLAUDE.md
+- รายละเอียดสถาปัตยกรรม เหตุผลการออกแบบ และ decision ต่างๆ ทั้งหมดอยู่ใน jusmin-ai/CLAUDE.md
