@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<title>FRIDAY</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23030a10' stroke='%231c8f99' stroke-width='1.5'/%3E%3Ccircle cx='16' cy='16' r='7' fill='%234df6ff'/%3E%3C/svg%3E" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- boot sequence -->
+  <div class="boot" id="boot"><pre id="bootText"></pre></div>
+
+  <canvas id="particles"></canvas>
+
+  <div class="hud" id="hud">
+
+    <div class="scanlines"></div>
+    <div class="vignette"></div>
+
+    <!-- กรอบมุมจอ แบบ targeting frame -->
+    <div class="frame-corner fc-tl"></div>
+    <div class="frame-corner fc-tr"></div>
+    <div class="frame-corner fc-bl"></div>
+    <div class="frame-corner fc-br"></div>
+
+    <button class="mute-btn" id="muteBtn" title="เปิด/ปิดเสียง">🔊</button>
+    <select class="engine-select" id="engineSelect" title="เลือก engine เสียงพูดของ FRIDAY">
+      <option value="vachana">เสียงคุณภาพสูง (ในเครื่อง)</option>
+      <option value="google">Google Translate (ทางเลือก)</option>
+    </select>
+    <select class="voice-select" id="voiceSelect" title="เลือกเสียงพูดของ FRIDAY">
+      <option value="th_f_1">เสียงหญิง 1</option>
+    </select>
+
+    <!-- มุมซ้ายบน: เวลาตอบสนองจริง (วัดจากการเรียก /api/chat แต่ละครั้ง) -->
+    <div class="panel panel-tl">
+      <div class="panel-label">RESPONSE TIME <span id="latencyLast">--</span></div>
+      <svg viewBox="0 0 120 40" class="graph-line" preserveAspectRatio="none">
+        <polyline id="latencyPoly" points="" />
+      </svg>
+      <div class="panel-empty" id="latencyEmpty">รอข้อมูล...</div>
+    </div>
+
+    <!-- มุมขวาบน: quota gauge จริงจาก /api/quota -->
+    <div class="panel panel-tr">
+      <div class="panel-label" id="quotaGaugeLabel">QUOTA USAGE</div>
+      <div class="bars" id="quotaBars">
+        <span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <!-- มุมซ้ายล่าง: สถานะการเชื่อมต่อกับ server จริง (heartbeat จาก poll /api/quota) -->
+    <div class="panel panel-bl">
+      <div class="radar" id="radar">
+        <div class="radar-sweep" id="radarSweep"></div>
+      </div>
+      <div class="panel-label link-status" id="linkStatus">LINK OK</div>
+    </div>
+
+    <!-- มุมขวาล่าง: นาฬิกาจริง -->
+    <div class="panel panel-br clock-panel">
+      <div class="clock-time" id="clockTime">--:--:--</div>
+      <div class="clock-date" id="clockDate">--</div>
+    </div>
+
+    <!-- เครื่องเล่น YouTube: โผล่มาเฉพาะตอนกำลังเล่นเพลง/วิดีโอจริงเท่านั้น (ไม่ใช่ของตกแต่ง) -->
+    <div class="yt-panel" id="ytPanel">
+      <div class="yt-panel-title" id="ytPanelTitle">-</div>
+      <div id="ytPlayerMount"></div>
+    </div>
+
+    <!-- สภาพอากาศ: โผล่มาเฉพาะตอนถามสภาพอากาศจริงๆ ข้อมูลทั้งหมดมาจาก Open-Meteo จริง ไม่ใช่ของปลอม -->
+    <div class="weather-panel" id="weatherPanel">
+      <div class="weather-fx" id="weatherFx"></div>
+      <div class="weather-location" id="weatherLocation">-</div>
+      <div class="weather-main">
+        <div class="weather-emoji" id="weatherEmoji">❓</div>
+        <div class="weather-temp" id="weatherTemp">--°</div>
+      </div>
+      <div class="weather-condition" id="weatherCondition">-</div>
+      <div class="weather-stats">
+        <span id="weatherFeelsLike"></span>
+        <span id="weatherHumidity"></span>
+        <span id="weatherWind"></span>
+      </div>
+      <div class="weather-forecast" id="weatherForecast"></div>
+    </div>
+
+    <!-- แกนกลาง: core -->
+    <div class="core-parallax" id="coreParallax">
+      <div class="core-wrap" id="coreWrap">
+        <div class="ring ring-scan"></div>
+        <div class="ring ring-outer"></div>
+        <div class="ring ring-mid"></div>
+        <div class="ring ring-inner"></div>
+        <div class="ticks"></div>
+        <div class="wave-ring" id="waveRing"></div>
+        <div class="core" id="core"></div>
+        <div class="status" id="status">STANDBY</div>
+        <div class="quota" id="quota">QUOTA --/--</div>
+      </div>
+    </div>
+
+    <!-- log การสนทนา -->
+    <div class="log" id="log"></div>
+
+    <!-- ช่องพิมพ์ + ปุ่มพูด -->
+    <form class="input-bar" id="form">
+      <span class="prompt">&gt;</span>
+      <input id="input" autocomplete="off" placeholder="พิมพ์ หรือพูด &quot;Friday&quot; ตามด้วยคำสั่งได้เลย..." autofocus />
+      <button type="button" class="mic-btn" id="micBtn" title="กดพูดกับ FRIDAY">🎤</button>
+      <button type="button" class="wake-btn" id="wakeBtn" title="โหมดฟังตลอด — พูด &quot;Friday&quot; ตามด้วยคำสั่งได้เลย">👂</button>
+    </form>
+
+    <div class="title">F.R.I.D.A.Y</div>
+  </div>
+
+<script src="app.js"></script>
+</body>
+</html>

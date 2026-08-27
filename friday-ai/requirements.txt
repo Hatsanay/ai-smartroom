@@ -1,0 +1,10 @@
+google-genai
+python-dotenv
+fastapi
+uvicorn[standard]
+ddgs
+vachanatts
+numpy
+gTTS
+yt-dlp
+requests
