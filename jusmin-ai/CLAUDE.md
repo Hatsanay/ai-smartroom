@@ -68,7 +68,7 @@
 - [x] **เว็บ UI (Jarvis HUD)** — `server.py` (FastAPI) + `static/` หน้าเว็บ animation แบบ HUD วงกลม คุยกับ จัสมิน ผ่านเบราว์เซอร์ได้ พร้อม panel แสดงโควตา Gemini + คูลดาวน์แบบสด
 - [x] **Step 1** — เพิ่ม tool แรก `search_web()` ผ่าน `ddgs` (DuckDuckGo, ฟรี ไม่ต้องขอ key)
   - **บั๊กจริงที่เจอตอนทดสอบครบทุกฟังก์ชัน**: `_ddgs.text()` (รุ่นที่ใช้อยู่) ยิง `DDGSException` ตอนไม่เจอผลลัพธ์/โดน rate-limit/timeout แทนที่จะคืน list ว่างตามที่โค้ดเดิมคาดไว้ (`if not results:` เลยเป็น dead code ที่ไม่เคยถูกเรียกถึง) — Gemini function calling เจอ exception ดิบแล้วรอดมาได้ (SDK จับเองแล้วบอกโมเดลว่า tool fail) แต่คำตอบจะกำกวมไม่ตรงประเด็น ("ระบบค้นหาขัดข้องชั่วคราว") ทั้งที่ query ไม่ได้ผิดอะไร — แก้โดยครอบ `try/except DDGSException` ใน `search_web()` คืนข้อความ graceful แทน
-- [ ] **Step 2** — เพิ่ม memory ถาวร (SQLite) ให้จำเรื่องเก่า-ใหม่ได้ข้ามเซสชัน
+- [x] **Step 2** — เพิ่ม memory ถาวร (SQLite) ให้จำเรื่องเก่า-ใหม่ได้ข้ามเซสชัน — **ทำแล้ว** พร้อมกับกลุ่ม tool เลขาทั้งชุด (memory/tasks/reminders/email/briefing) ดูหัวข้อ "กลุ่ม tool เลขา" ด้านล่าง
 - [ ] **Step 3** — ตั้ง Home Assistant + ESP32/รีเลย์ ให้คุมอุปกรณ์จริง
 - [ ] **Step 4** — เพิ่ม `control_home()` เพื่อให้ agent เรียก HA สั่งอุปกรณ์ได้
 - [ ] **Step 5** — ขยาย tool (คุม TV, เครื่องเล่น) ทีละอัน
@@ -104,7 +104,7 @@
 
 **`action.type` ที่มีตอนนี้ 3 แบบ (`server.py` ส่ง, `app.js` เป็นคนลงมือจริง):**
 1. `open_url` — เปิดแท็บใหม่ด้วย `url` ที่กำหนด (ใช้ตอน `open_youtube()` ไม่มี query เลย แค่เปิดหน้าแรก youtube.com เฉยๆ)
-2. `play_youtube` — โหลด+เล่นวิดีโอ `video_id`/`title` ที่กำหนดในเครื่องเล่นที่ฝังอยู่ในหน้าเว็บเอง (ไม่ใช่เปิดแท็บแยก)
+2. `play_youtube` — โหลด+เล่นวิดีโอ `video_id`/`title` ในเครื่องเล่นที่ฝังในหน้าเว็บ (ไม่ใช่แท็บแยก) + `reset_volume` (bool: `open_youtube`=true รีเซ็ตเสียง 25%, `next`=false คงเสียงเดิม)
 3. `youtube_control` — สั่ง `action` ("pause"/"resume"/"stop"/"volume_up"/"volume_down"/"fullscreen"/"exit_fullscreen") กับเครื่องเล่นที่กำลังเล่นอยู่
 
 **เปิดวิดีโอเต็มจอ (`control_youtube('fullscreen')` / `'exit_fullscreen'`):**
@@ -123,11 +123,14 @@
 - `#ytPlayerMount` ถูก YT API แทนที่ด้วย `<iframe>` จริงตอนสร้าง `new YT.Player(...)` — panel `#ytPanel` (มุมซ้ายกลางของจอ) ซ่อนไว้เป็นค่าเริ่มต้น (`opacity:0`) โผล่มาเฉพาะตอนกำลังเล่นเพลงจริงเท่านั้น ตรงกับหลักการ "ห้ามใส่ panel ที่โชว์ข้อมูลปลอม"
 - **Audio ducking**: ตอน จัสมิน พูด (TTS) จะลดเสียงเพลง YouTube ลงชั่วคราวเหลือ `YT_DUCK_VOLUME = 15` (จาก `ytVolume` ปัจจุบัน) ผ่าน `ytPlayer.setVolume()` แล้วคืนกลับตอนพูดจบ (`ttsAudio`'s `play`/`ended`/`error` event — `duckYoutubeVolume()`/`restoreYoutubeVolume()` ใน `app.js`) กันเสียงพูดทับเพลงจนฟังไม่รู้เรื่อง ยังไม่ได้ทำ AEC จริงจัง (echo cancellation ระดับสัญญาณเสียง) แค่ลด volume ธรรมดา เพียงพอสำหรับ use case นี้แล้ว
 - **สั่งเพิ่ม/ลดเสียงเพลงด้วยเสียงได้** (`control_youtube('volume_up'/'volume_down')`) — `ytVolume` (ตัวแปรใน `app.js`) เป็น "baseline" ที่ผู้ใช้ตั้งไว้ล่าสุด **แยกต่างหากจากค่าตอน duck ชั่วคราว** (`YT_DUCK_VOLUME`) เพิ่ม/ลดทีละ `YT_VOLUME_STEP = 25` (เดิม 20) clamp ไว้ที่ 0-100 เสมอ
+- **ค่าเริ่มต้นเสียง = 25% เฉพาะตอน "เปิดใหม่" (ผู้ใช้ขอ)** — `YT_DEFAULT_VOLUME = 25` (JS) / `_YT_DEFAULT_VOLUME = 25` (`tools/youtube.py`, ต้อง sync มือ)
+  - **"เปิด YouTube ใหม่" (`open_youtube`) → รีเซ็ตเป็น 25%**: `open_youtube` แนบ `"reset_volume": True` ใน `play_youtube` action; `main.js` ส่งต่อเป็น arg ที่ 3 ของ `playYoutubeVideo(id, title, resetVolume)`; JS `applyDefaultVolume()` ตั้ง `ytVolume=25` + `setVolume(25)` (ข้าม setVolume ถ้า TTS duck ค้างอยู่ — `restoreYoutubeVolume()` หยิบไปใช้ตอนพูดจบ). `onYtPlayerReady` (player แรกสุด = มาจาก `open_youtube` เสมอ) ก็เรียก `applyDefaultVolume()`. `stop` ก็รีเซ็ต `ytVolume`/`_youtube_volume` กลับ 25
+  - **"เปลี่ยนเพลง / เพลงถัดไป" (`next`) → คงเสียงเดิมไว้**: `next` แนบ `"reset_volume": False`; JS ข้าม `applyDefaultVolume()` (loadVideoById ไม่แตะ volume ของ player อยู่แล้ว); server ไม่แตะ `_youtube_volume` — % ที่ตอบใน `volume_up/down` เลยยังตรง
   - **feedback จริงจากผู้ใช้**: สั่ง "ลดเสียง" แล้ว "รู้สึกว่าไม่ลดเลย" — ไล่ตรวจสอบด้วย `player.getVolume()` ของ real YT.Player (ไม่ใช่ mock) ยืนยันว่า**กลไกทำงานถูกต้อง 100%** (ค่าเปลี่ยนจาก 100 เป็น 80 จริงตามที่สั่ง 1 ครั้งที่ step เดิม 20) แต่หูมนุษย์รับรู้ความดังแบบ logarithmic ไม่ใช่ linear ทำให้ step 20 หน่วยจาก 100 รู้สึกถึงความต่างน้อยเกินไปจนเหมือนไม่ได้เปลี่ยน — เพิ่ม step เป็น 25 ให้รู้สึกถึงการเปลี่ยนแปลงชัดเจนขึ้นต่อ 1 คำสั่ง (ถ้ายังรู้สึกน้อยไปอีกปรับเพิ่มได้ตามใจ)
   - **feedback รอบ 2**: ผู้ใช้รายงานว่า "หลังถาม จัสมิน มันเพิ่มเสียงให้เอง" — ทดสอบจำลองสถานการณ์ (เปิดเพลง → ลดเสียง → ถามคำถามทั่วไปที่ไม่เกี่ยวกับเพลงเลย → เช็ค `player.getVolume()` จริงหลัง TTS duck/restore cycle) **ไม่พบว่า Gemini เรียก `volume_up` เองเลย** (`action: null` ตามคาด, volume คงที่ถูกต้อง) เป็นไปได้ว่าเป็นเคสเฉพาะ (STT ฟังผิดเป็นคำสั่งเพิ่มเสียง, หรือบทสนทนารูปแบบอื่นที่ไม่ได้ลองจำลอง) — แก้เชิงป้องกันไว้ก่อนตามที่ผู้ใช้ขอ: เพิ่ม `_youtube_volume` ให้ server (`tools.py`) ติดตามระดับเสียงปัจจุบันขนานไปกับฝั่ง client (`ytVolume` ใน `app.js`คนละตัวแปร คนละภาษา ต้อง sync `_YT_VOLUME_STEP`/`YT_VOLUME_STEP` มือเอง) ให้ข้อความตอบของ `volume_up`/`volume_down` บอกเปอร์เซ็นต์ปัจจุบันเสมอ (เช่น "ลดเสียงเพลงให้แล้วค่ะ ตอนนี้อยู่ที่ 75%") จะได้ปรากฏในประวัติบทสนทนาที่ Gemini เห็น มี context จริงอ้างอิงแทนเดามั่วๆ พร้อมเสริม docstring ของ `control_youtube()` ให้ชัดว่า**ห้ามเรียกเองเดาเอาว่าผู้ใช้อาจต้องการ** ต้องเป็นคำขอที่ชัดเจนจริงๆ เท่านั้น
   - **จุดที่ต้องระวัง**: `restoreYoutubeVolume()` ต้องคืนกลับไปที่ `ytVolume` ไม่ใช่ค่าคงที่ 100 เสมอ ไม่งั้นถ้าผู้ใช้เคยหรี่เสียงไว้ พอ จัสมิน พูดจบเสียงเพลงจะดังกลับไป 100% เองทุกครั้งที่พูด ผิดจากที่ผู้ใช้ตั้งไว้
   - **ถ้าสั่งปรับเสียงระหว่างที่ จัสมิน กำลังพูดอยู่พอดี** (`ttsSpeaking === true`, กำลัง duck ค้างอยู่) จะไม่เรียก `setVolume()` ทันที แค่จำค่า `ytVolume` ใหม่ไว้ก่อน กันเสียงเพลงดังแทรกขึ้นมากลางประโยคที่ จัสมิน กำลังพูด — พอ TTS จบจริง `restoreYoutubeVolume()` จะหยิบค่าล่าสุดไปใช้เอง
-  - `control_youtube('stop')` รีเซ็ต `ytVolume` กลับ 100 ด้วย (เริ่มเซสชันฟังเพลงครั้งถัดไปที่ปกติเสมอ ไม่ค้างค่าที่เคยปรับไว้ข้ามเซสชันเก่า)
+  - `control_youtube('stop')` รีเซ็ต `ytVolume` กลับ `YT_DEFAULT_VOLUME` (25) ด้วย (เริ่มฟังเพลงครั้งถัดไปที่ค่าเริ่มต้นเสมอ ไม่ค้างค่าที่เคยปรับไว้)
 - **ระหว่างเพลงเล่นอยู่จริง ต้องพูด "จัสมิน" นำทุกครั้ง ห้ามข้ามช่วงคุยต่อเนื่อง 15 วิ** — ผู้ใช้ขอเพราะกลัวเนื้อเพลง/เสียงร้องถูก STT จับแล้วตีความเป็นคำสั่งมั่วๆ ระหว่างเพลงเล่น (ความเสี่ยงสูงกว่าเวลาปกติเพราะมีเสียงคนพูด/ร้องเพลงในห้องต่อเนื่องยาวกว่าประโยคสนทนาทั่วไป) — คุมด้วยตัวแปร `ytIsPlaying` ใน `app.js` ที่อัปเดตจาก **state จริงของ `YT.Player`** ผ่าน `onStateChange` event (ไม่ใช่เดาจากว่าเพิ่งสั่ง `playVideo()` ไปหรือยัง) แล้วเช็คเงื่อนไข `if (followUpActive && !ytIsPlaying)` ใน `wakeRecognition.onresult` — เพลงเล่นอยู่จริงจะบังคับให้ตกไปเช็ค `extractWakeCommand()` เสมอ ซึ่งต้องมีคำว่า "จัสมิน" อยู่จริงในประโยคถึงจะทำงาน
   - `controlYoutube('pause'/'stop')` ตั้ง `ytIsPlaying = false` ทันทีไม่รอ `onStateChange` async กลับมา (ฝั่ง `resume` ปล่อยให้รอ event จริงเพราะตั้ง `true` ทันทีเสี่ยงผิดถ้า buffering ช้า — ทิศทางที่ปลอดภัยกว่าคือรอให้แน่ใจก่อน)
 
@@ -149,7 +152,7 @@
 **เรื่องต้องรู้เกี่ยวกับ wake word:**
 - **โหมดฟังตลอดเปิดเป็นค่าเริ่มต้น** (auto-start ทันทีที่โหลดหน้าเว็บ, ปุ่ม 👂 จะติดไฟทันที) — เบราว์เซอร์จะขอสิทธิ์ไมค์เองถ้ายังไม่เคยอนุญาต
 - เปิดแล้ว browser จะส่งเสียงไมค์ไปประมวลผลที่ cloud ของ Google (Web Speech API) **ตลอดเวลา** ไม่ใช่แค่ตอนกดพูด มีผลเรื่อง privacy/แบตเตอรี่/data ที่ควรรู้ไว้
-- "จัสมิน" เป็นคำภาษาอังกฤษทั่วไป (ชื่อวัน) เสี่ยง false trigger ได้ถ้ามีคนพูดถึงวันศุกร์ หรือทีวี/พอดแคสต์พูดคำนี้ผ่าน ๆ ในห้อง
+- "จัสมิน" คล้ายคำทั่วไป (jasmine ดอกมะลิ / ชื่อคน / เพลงแจ๊ส) เสี่ยง false trigger ได้ถ้าทีวี/พอดแคสต์พูดผ่าน ๆ ในห้อง — `WAKE_WORD_PATTERNS` ตั้งใจกว้าง (ผู้ใช้ขอ "เรียกง่ายขึ้น") ยอมรับ false trigger จาก "แจ๊ส/jasmine" บ้าง แลกกับการเรียกติดง่าย; ปรับแคบลงได้ที่ list เดียวในไฟล์ `voice.js`
 - **กัน feedback loop โดยปิดไมค์จริงตอน จัสมิน พูด** — `pauseWakeListening()` เรียก `recognition.stop()` จริง ๆ ตอน audio element ยิง event `play` (ไม่ใช่แค่เช็ค flag) แล้ว `resumeWakeListeningAfterDelay()` เปิดกลับมาหลัง event `ended`/`error` + หน่วง 500ms กันหางเสียง/เสียงสะท้อนในห้อง ข้อแลกเปลี่ยนที่ยอมรับ: **แทรกกลางประโยคไม่ได้** ต้องรอ จัสมิน พูดจบก่อน (ชดเชยด้วยช่วงคุยต่อเนื่อง 15 วิด้านล่าง)
   - เคยลองอีกวิธี (ไม่ปิดไมค์ เทียบข้อความที่ได้ยินกับสิ่งที่ จัสมิน กำลังพูดอยู่แทน เพื่อให้แทรกได้ทันที) แต่ไม่น่าเชื่อถือพอในการใช้งานจริง เพราะเสียงสะท้อนที่ผ่าน STT กลับมามักเพี้ยนจากต้นฉบับเยอะ เทียบไม่ติด — **แผนอนาคต**: ทำ Acoustic Echo Cancellation จริงผ่าน `getUserMedia({echoCancellation:true})` + STT backend เอง (เช่น Whisper ตามแผนเดิม) ถึงจะแทรกกลางประโยคได้แบบเชื่อถือได้จริง
 - ใช้ปุ่มไมค์กดพูดปกติไม่ได้พร้อมกับโหมดนี้ (ปิดปุ่มไมค์ไว้อัตโนมัติตอนเปิดโหมดฟังตลอด)
@@ -157,7 +160,8 @@
 - **เรียกชื่อเฉยๆ ไม่มีคำสั่งตาม** (พูดแค่ "จัสมิน" คำเดียว) — จัสมิน จะ**ตอบรับด้วยเสียงจริง** (สุ่มจาก `WAKE_ACK_PHRASES` กันซ้ำจำเจ) ไม่ใช่แค่เสียง beep เหมือนก่อนหน้านี้ พอตอบรับเสร็จ (ไมค์เปิดกลับมาเอง) จะเข้าสู่ช่วงคุยต่อเนื่อง 15 วิทันที (`startFollowUpWindow()`) ให้พูดคำถามจริงต่อได้เลยโดยไม่ต้องพูด "จัสมิน" ซ้ำอีกรอบ
 - **บั๊กจริงที่เจอ: พูด "จัสมิน" คำเดียวแล้วติดบ้างไม่ติดบ้าง** — สาเหตุคือ `wakeRecognition.onend` restart session ใหม่ทุกครั้งที่ session เดิมจบ (Chrome ตัด `continuous:true` session เองเป็นระยะ**แม้ไม่มี error เลย** ไม่ใช่แค่ตอน error เท่านั้น) โค้ดเดิมหน่วง 250ms ก่อน restart ทุกรอบ — ระหว่าง 250ms นั้นไมค์ "หูหนวก" สนิท ถ้าจังหวะพูดคำสั้นๆ อย่าง "จัสมิน" (~300-500ms) ดันตรงกับช่วงรีสตาร์ทพอดี คำนั้นจะหายไปเงียบๆ โดยไม่มี error ให้เห็นเลย — ยิ่งพูดคำเดียวสั้นๆ ยิ่งเสี่ยงกว่าประโยคยาว (มีโอกาสถูก "ตัด" มากกว่า) ตรงกับ pattern ที่ผู้ใช้เจอ แก้โดยลดหน่วงเหลือ `WAKE_RESTART_DELAY_MS = 30` (จาก 250) ลดหน้าต่างที่พลาดได้ลงไปมาก (ทดสอบวัดจริง gap ลดจาก 250ms เหลือ ~31ms) ยังเหลือกันชนเล็กน้อยกัน Chrome โยน "recognition already started" ถ้า restart เร็วเกินไป
   - เพิ่ม retry ใน `catch` ของ `wakeRecognition.start()` ด้วย (เดิมถ้า `start()` throw จะไม่มีอะไรมา restart ให้เลยเพราะ session นั้นไม่เคย start จริง `onend` เลยไม่มีทางยิง) — ป้องกันโหมดฟังตลอดค้างเงียบไปเฉยๆ แบบไม่มี error ให้เห็น
-  - เพิ่ม `console.debug('[wake] missed:', transcript)` ตอน STT ได้ยินอะไรมาแต่ไม่ตรงกับ `WAKE_WORD_PATTERNS` เลย — เผื่อสาเหตุอีกทางที่เป็นไปได้คือ Google STT ถอดเสียง "จัสมิน" เป็นคำไทยสะกดแบบอื่นที่ไม่อยู่ใน pattern list (ไม่ใช่ปัญหาจังหวะ) เปิด DevTools console (F12) เทียบดูได้ว่า STT ได้ยินเป็นคำว่าอะไรจริงๆ ตอนพูดแล้วไม่ติด
+  - `console.log('[wake] missed:', transcript)` ตอน STT ได้ยินอะไรมาแต่ไม่ตรงกับ `WAKE_WORD_PATTERNS` เลย (ใช้ `console.log` ไม่ใช่ `debug` จะได้เห็นใน console โดยไม่ต้องเปิด Verbose) — เปิด F12 ดูว่า STT ถอด "จัสมิน" เป็นคำว่าอะไรตอนเรียกไม่ติด แล้วเอามาเพิ่มใน pattern list
+  - `WAKE_WORD_PATTERNS` (ใน `voice.js`) ตอนนี้กว้างมาก: โรมัน (jusmin/jasmine/yasmin/jazmin/justin/chmin...) + ไทยสลับ จ↔ย↔ญ↔ช, ส↔ด↔ซ↔ช↔ท, เติม/ตัดสระ, มีวรรณยุกต์แทรก (`T = [็-๎]?` คั่นทุกพยางค์), เว้นวรรคกลางคำ, หาง "ทร์/์", ตัว จ นำหล่น (รัสมิน/อัสมิน), และ fallback สั้น "จัส/แจ๊ส/จัสมิ" (ใช้ lookbehind `(?<=^|\s)` กันกิน space นำหน้าจนตัดคำสั่งเพี้ยน). ตั้งใจ **ไม่** จับ "จัด" เดี่ยวๆ (คำไทยปกติ). `extractWakeCommand()` เลือก match ที่ต้นประโยคสุด แล้ว slice ส่วนที่เหลือเป็นคำสั่ง
 - **Debounce 5 วิก่อนส่งคำสั่งจริง (`COMMAND_DEBOUNCE_MS`)** — ผู้ใช้ขอเพราะเดิม `wakeRecognition.onresult` ส่งคำสั่งทันทีที่ recognition ตัดจบประโยค (isFinal) ซึ่งเกิดขึ้นเร็วกว่าที่คิด ถ้าหยุดพูดแป๊บนึงเพื่อคิดคำต่อ ท่อนแรกจะถูกตัดส่งไปเป็นคำสั่งที่ยังพูดไม่จบเลย — แก้ด้วย `queueWakeCommand(text)`/`flushWakeCommand()`: แทนที่จะ `form.requestSubmit()` ทันที จะต่อท้อความเข้ากับ `pendingCommandText` แล้วรีเซ็ตนาฬิกา 5 วิใหม่ทุกครั้งที่ได้ยินเสียงเพิ่ม จนกว่าจะเงียบจริงๆ ครบ 5 วิถึงส่งเป็นข้อความเดียว
   - ระหว่างรอ debounce (`isAccumulatingCommand = true`) พูดต่อได้โดย**ไม่ต้องพูด "จัสมิน" ซ้ำ** — เงื่อนไขใน `onresult` เปลี่ยนจาก `if (followUpActive && !ytIsPlaying)` เป็น `if ((followUpActive || isAccumulatingCommand) && !ytIsPlaying)` ไม่งั้นท่อนพูดต่อ (ที่ไม่มีคำว่า จัสมิน แน่นอนเพราะเป็นประโยคเดียวกัน) จะหลุดไปเช็ค `extractWakeCommand()` แล้วโดนทิ้งเป็น "missed" ไปเฉยๆ
   - **ผลข้างเคียงที่ตั้งใจยอมรับ**: ทุกคำสั่งเสียง (ไม่ว่าจะหยุดคิดหรือพูดรวดเดียวจบ) จะช้าลง 5 วิเทียบกับก่อนหน้านี้เสมอ เพราะระบบรอดูก่อนว่าจะพูดต่อไหมทุกครั้ง ไม่ใช่แค่ตอนตรวจจับว่าหยุดกลางคัน — เป็น trade-off ที่ผู้ใช้ยอมรับเพื่อแลกกับไม่ให้ประโยคถูกตัดกลางคัน
@@ -254,6 +258,104 @@ Bar 40 อันรอบ core ขยับตามข้อมูลจริ�
 
 **Audit log (JSON)** — ทุกครั้งที่เลือกโฟลเดอร์ใหม่ผ่านปุ่ม 📁 (`set_allowed_folder()` ใน `tools.py`) จะสร้างไฟล์ log ใหม่ **แยกไฟล์ต่อรอบ** ที่ `logs/file_activity_<YYYYMMDD_HHMMSS>.json` (ไม่ทับของเดิม — เลือกโฟลเดอร์ใหม่กี่ครั้งก็มีไฟล์ log สะสมไว้ครบทุกรอบ) แต่ละ entry บันทึก `timestamp`, `action` (`list_files`/`read_file`/`create_folder`/`write_file`/`delete_path`/`folder_selected`), `path`, `success`, `detail` (เหตุผลตอน fail เช่น "outside allowed scope", "disallowed extension .exe") — บันทึกทั้งเคสสำเร็จและล้มเหลว ไม่ใช่แค่ที่ทำสำเร็จ เพื่อให้ตรวจสอบย้อนหลังได้ว่า จัสมิน เคยพยายามทำอะไรบ้าง ไฟล์ log เก็บเป็น array เดียวเขียนทับทั้งไฟล์ทุกครั้งที่มี entry ใหม่ (ไม่ใช่ append แบบ NDJSON) เพราะไฟล์เล็ก (การใช้งานส่วนตัวคนเดียว ไม่ได้ concurrent เขียนพร้อมกันหลาย request) — โฟลเดอร์ `logs/` อยู่ใน `.gitignore` แล้ว ไม่ commit ขึ้น git
 
+## กลุ่ม tool เลขา (memory / tasks / reminders / email / daily_briefing)
+
+ผู้ใช้ขอให้ จัสมิน เป็น "เลขาสมบูรณ์" — เริ่มจาก **กลุ่ม A**: ความจำถาวร + ตารางงาน + การเตือน + อีเมล + สรุปวัน
+ทั้งหมด server-side ล้วน (คืน string ให้ LLM เรียบเรียง) ยกเว้น "การเตือนเด้ง" ที่ใช้ notification channel แยก
+
+**DB — `jusmin-ai/jusmin.db` (SQLite, `tools/db.py`)**
+- path คิดจาก project dir แบบเดียวกับ `tools/files.py` (`_PROJECT_DIR = dirname(dirname(abspath(__file__)))`) — อยู่ใน `.gitignore`
+- `connect()` เปิด connection ใหม่ทุก operation (`timeout=5`, `row_factory = sqlite3.Row`) — personal use คนเดียว ไม่ต้อง pool
+- `query(sql, params)` → `fetchall()`; `execute(sql, params)` → `(lastrowid, rowcount)` + commit
+- `_init()` รัน `executescript(_SCHEMA)` ตอน import — 3 ตาราง `CREATE TABLE IF NOT EXISTS`: `memory`, `tasks`, `reminders`
+- ลบไฟล์ `jusmin.db` ทิ้ง = ล้างความจำ/งาน/การเตือนทั้งหมด (สร้างใหม่อัตโนมัติรอบ import ถัดไป)
+
+**`tools/memory.py`** — `remember(fact, tag="")` / `recall(query="")` / `forget(query)`
+- ค้นด้วย `LIKE` (fact น้อย ไม่ต้อง FTS5), `recall` LIMIT 40, `forget` = `DELETE ... LIKE` คืนจำนวนที่ลบ
+- **`memory_preamble()`** (ไม่ใช่ tool) — คืน block สั้นๆ ของ fact ทั้งหมด หรือ `""` ถ้าไม่มี — `server.py`'s `chat_endpoint`
+  เอาไป **prepend หน้า `req.message` ทุกเทิร์น** ก่อน `chat.send_message()` → จัสมิน เห็น fact เสมอ + fact ที่เพิ่ง
+  `remember()` มีผลทันทีในเซสชันเดียวกัน (ยอม redundant ใน history เล็กน้อย แลกกับไม่ต้อง restart) — `system_instruction` เดิมไม่แตะ
+- **`_now_preamble()`** (ใน `server.py`) — prepend หน้า `req.message` ทุกเทิร์นเหมือนกัน คืนบรรทัด "เวลาปัจจุบัน..."
+  (Thai date + ISO). **จำเป็น** เพราะ Gemini ไม่รู้เวลาจริงเอง ถ้าไม่บอกจะเดา (มักอิงยุค training data → เพี้ยนเป็นปีก่อน)
+  ทั้งตอนตอบ "กี่โมงแล้ว" และตอนแปลง "อีก 15 นาที" / "พรุ่งนี้ 9 โมง" เป็น ISO ให้ `add_reminder`/`add_task`.
+  ใช้ `datetime.now()` = เวลาเครื่องที่รัน server (ตอนนี้ = เครื่องผู้ใช้ ถูกต้อง); HUD clock ฝั่งเว็บใช้ `new Date()` แยกต่างหาก
+- ล้าง `tools.set_client_location(None)` ใน `finally` ทำเหมือนเดิม — preamble ไม่ต้องล้างเพราะ prepend ใหม่ทุกเทิร์นอยู่แล้ว
+
+**`tools/tasks.py`** — `add_task(text, due="", priority="normal")` / `list_tasks(which="open")` / `complete_task(query)`
+- `due` = ISO string หรือ `""` (docstring สั่ง LLM แปลงเวลาที่ผู้ใช้พูดกำกวมเป็น ISO ก่อน); `priority` ∈ {low, normal, high}
+- `which` ∈ open / today / done / all — `today` = `done=0 AND due_at!='' AND substr(due_at,1,10)<=?`
+- `complete_task(query)` = ถ้า `#<เลข>` ใช้ id ตรงๆ ไม่งั้น LIKE match; **ปฏิเสธถ้า match >1 แถว** (ให้ผู้ใช้ระบุให้ชัด)
+
+**`tools/reminders.py`** — `add_reminder(text, when_iso)` / `list_reminders()` / `cancel_reminder(query)` + `check_due()`
+- `_parse(when_iso)` = `datetime.fromisoformat` (fallback แทน `" "` เป็น `"T"`), คืน `None` ถ้า parse ไม่ได้
+- `add_reminder` ปฏิเสธเวลาที่ parse ไม่ได้ / เป็นอดีต (คืน error ให้ LLM ถามใหม่)
+- **`check_due()`** (scheduler เรียก ไม่ใช่ tool) : `WHERE fired=0 AND remind_at<=now` → mark `fired=1` → `notify.push(text, "reminder")`
+
+**scheduler thread (`server.py`, module scope)**
+```python
+def _scheduler_loop():
+    while True:
+        try: tools.reminders.check_due()
+        except Exception: pass
+        time.sleep(20)
+threading.Thread(target=_scheduler_loop, daemon=True, name="jusmin-scheduler").start()
+```
+- `daemon=True` ตายพร้อม process, วนทุก ~20 วิ — ไม่มี persistence ของ timer เอง (state อยู่ใน DB ทั้งหมด) restart server แล้ว reminder ที่เลยเวลายังเด้งอยู่ (เพราะ `remind_at<=now` ยังจริง)
+
+**notification channel (reminder เด้งเฉพาะตอนเปิดหน้าเว็บ — ผู้ใช้เลือกเอง ไม่ทำ Windows toast)**
+- `tools/notify.py` = queue + `threading.Lock`. `push(text, kind="reminder")` เก็บ `{text, kind, at}`; `drain()` คืนทั้งหมด + เคลียร์
+- `GET /api/notifications` (`server.py`) → `{"items": tools.notify.drain()}` + `Cache-Control: no-store`
+- `static/js/notify.js` — poll ทุก 10 วิ, แต่ละ item เรียก `announceSystemNotice('⏰ ' + text)` (reuse ของเดิม — ตั้ง `engagedActive` ให้แชทโผล่),
+  แล้ว `speak()` ตัวสุดท้าย. import ใน `main.js` แบบ side-effect (`import './notify.js';`)
+- เหตุผลที่ **ไม่ใช้ `_state.pending_action`** — reminder เด้งมาจาก scheduler thread คนละ context กับ chat turn เลย
+  ส่งผ่าน queue แยกเหมาะกว่า (pending_action เป็น slot เดียวผูกกับ response ของ `chat_endpoint`)
+
+**`tools/mail.py`** (ห้ามชื่อ `email.py` — ชน stdlib) — `check_email(n=5, folder="inbox")` / `read_email(query, folder="")` / `search_email(query, folder="all", limit=10)` / `save_attachment(query, name="", dest="")` / `send_email(to, subject, body, attachments="", confirm=False)`
+- imaplib/smtplib + `email` stdlib ล้วน ไม่ต้อง API key — config จาก `.env`: `EMAIL_ADDRESS` / `EMAIL_APP_PASSWORD` (Gmail App Password)
+  / `EMAIL_IMAP_HOST` (default imap.gmail.com) / `EMAIL_SMTP_HOST` (default smtp.gmail.com) / `EMAIL_SMTP_PORT` (default 587, STARTTLS)
+- **`_cfg()` อ่าน `os.environ` ตอนเรียกใช้ ไม่ใช่ตอน import** — เพราะ `tools/` ถูก import ก่อน `load_dotenv()` ใน `server.py`;
+  ไม่ตั้งค่า → ทุก tool คืนข้อความ `_NOT_SET` ไม่ error. `_cfg()` `"".join(...split())` ตัดช่องว่างใน App Password (Google โชว์เป็น 4 กลุ่ม)
+- **ครอบคลุมทุกกล่อง** — `folder` รับได้ inbox/sent/drafts/all/spam/trash/starred + คำไทย (`_ALIAS`: "ที่ส่ง"→sent, "ถังขยะ"→trash, ...).
+  หากล่องจริงจาก **IMAP SPECIAL-USE flag** (`\Sent \Drafts \All \Junk \Trash \Flagged`) ผ่าน `m.list()` → localization-proof
+  (ไม่ยึดชื่อ `[Gmail]/Sent Mail` ที่เปลี่ยนตามภาษาบัญชี); fallback = ชื่ออังกฤษ `_GMAIL_NAME`
+- **ค้นหา** `_search_seqs()` — Gmail (`_is_gmail()`) ใช้ **`X-GM-RAW`** = พิมพ์ `from: to: in:sent subject: after: has:attachment` ได้เต็มรูปแบบ
+  (ascii → quoted string, ไทย → `m.literal` + `CHARSET UTF-8`); ไม่ใช่ Gmail → `(OR OR OR FROM TO CC SUBJECT)` หรือ `TEXT` literal สำหรับไทย
+- `check_email`: inbox = `UNSEEN` + `BODY.PEEK` (**ไม่ mark read**); กล่องอื่น = `_newest_seqs(count, n)` เอา n ฉบับท้ายจาก EXISTS count (ไม่ SEARCH ALL)
+- แถวลิสต์ (`_fmt_row`) โชว์ **"ถึง <ผู้รับ>" ถ้าเป็นเมลที่เราส่งเอง** (`my_addr in From` หรือ folder=sent/drafts) ไม่งั้น "จาก <ผู้ส่ง>"
+- `read_email` = ลำดับจาก `_last_uids` (ต้องกล่องเดียวกับ `_last_mailbox`) หรือ search; folder ว่าง + อ้างด้วยคำ → ค้น All Mail (Gmail); `RFC822` fetch **mark read**; `_plain_body()` text/plain ก่อน, ตัด 4000.
+  ต่อท้ายด้วยบรรทัด "ไฟล์แนบ: ..." ถ้ามี (`_iter_attachments()`)
+- `_last_uids` + `_last_mailbox` (module global) — seq number ผูกกับกล่อง ต้อง track คู่กัน
+- **ไฟล์แนบ ผูกกับ tool ไฟล์ในคอม** (`from . import files`) — เข้า/ออกได้เฉพาะในโฟลเดอร์ที่ผู้ใช้อนุญาต (ปุ่ม 📁), ผ่าน `files._resolve_safe_path()` (containment ด้วย `commonpath()`) + `files._log_activity("save_attachment"/"email_attach", ...)` ลง audit log เดียวกัน. เพดาน 25MB/ไฟล์
+  - `save_attachment(query, name, dest)` — fetch RFC822 → `_iter_attachments()` (part ที่มี filename/`Content-Disposition: attachment`) → `_safe_name()` (basename, ตัด `..`/อักขระต้องห้าม Windows) → `_uniq()` (เติม " (2)" กันทับ) → เขียน bytes. `name` = filter substring, `dest` = โฟลเดอร์ย่อยปลายทาง
+  - `send_email(..., attachments="a.pdf, ง/b.png")` — `_resolve_attachments()` resolve แต่ละ path → อ่าน bytes → เดา MIME (`mimetypes`) → `em.add_attachment()`. ไฟล์หาไม่เจอ/นอกขอบเขต/ใหญ่เกิน → พรีวิวโชว์ ⚠️ + **confirm ไม่ผ่าน** (ต้องแก้ก่อน). `att_key` (tuple paths sorted) รวมอยู่ใน `_pending_send` เทียบ `same` ด้วย
+- **ลายเซ็นอัตโนมัติ** (ผู้ใช้ขอ) — `_with_signature()` ต่อท้าย `body` ทุกฉบับก่อนพรีวิว/เทียบ/ส่ง:
+  `"—\nนี่คือการส่งอีเมลจาก J.U.S.M.I.N ผู้ช่วย AI ของคุณ\n<ชื่อ>"` โดย `<ชื่อ>` = `EMAIL_SENDER_NAME` ใน `.env` หรือ `cfg["addr"]`.
+  กันต่อซ้ำด้วยการเช็ค `_SIG_MARKER` ในตัว body (LLM อาจ echo ลายเซ็นจากพรีวิวกลับมาตอน confirm). docstring บอก LLM ว่าไม่ต้องเขียนลายเซ็นเอง
+- `send_email(to, subject, body, confirm=False)` — **บังคับ 2 ขั้นในโค้ดจริง ไม่ใช่แค่ docstring**: เก็บร่างใน
+  `_pending_send` (module global, TTL 600 วิ) ตอนพรีวิว → "ส่งจริง" ได้ต่อเมื่อเรียกซ้ำด้วย `confirm=True` **และ**
+  to/subject/body ตรงกับร่างที่เพิ่งทวนเป๊ะ (`_norm_to()` sort ผู้รับก่อนเทียบ). ยิง `confirm=True` มาแต่ครั้งแรก
+  (ไม่มีร่างค้าง) → ยังเป็นพรีวิว ไม่ส่ง; เนื้อหา drift จากร่าง → พรีวิวใหม่ ไม่ส่ง; ส่งเสร็จเคลียร์ `_pending_send`
+  กันส่งซ้ำ. validate `"@" in to`. Gmail เซฟลง Sent เอง; ผู้ให้บริการอื่นทำ `IMAP APPEND` ลง `\Sent` เอง (best-effort)
+- **`unread_count()`** (ไม่ใช่ tool) — คืน `int` (inbox UNSEEN) หรือ `None` ให้ `daily_briefing` ใช้
+
+**`tools/briefing.py`** — `daily_briefing()`
+- ประกอบ string ก้อนเดียว: วันที่ไทย (`_THAI_WD`/`_THAI_MONTH`) + งานครบกำหนดวันนี้/เลยกำหนด + งาน priority=high ที่ค้าง
+  + การเตือนที่เหลือวันนี้ + `mail.unread_count()` (ข้ามถ้า `None`)
+- docstring สั่ง LLM **หลังได้ผลให้เรียก `get_weather()` เพิ่มแล้วเรียบเรียงรวมเป็นบทพูดสั้นๆ** (อย่าอ่านเป็นลิสต์แข็งๆ)
+
+**การ wire เข้า `server.py`**
+- `from tools import (... add_reminder, add_task, cancel_reminder, check_email, complete_task, daily_briefing, forget,
+  list_reminders, list_tasks, read_email, recall, remember, search_email, send_email ...)`
+- `chat = client.chats.create(tools=[... + remember, recall, forget, add_task, list_tasks, complete_task,
+  add_reminder, list_reminders, cancel_reminder, check_email, read_email, search_email, send_email, daily_briefing])`
+  → รวมเป็น **23 tools** (tools list ยาวขึ้น Gemini อาจช้าลงนิด — เฝ้าดู)
+- `tools/__init__.py` re-export ทุกชื่อ + `from . import notify, reminders` (submodule ให้ `server.py` เรียก `tools.notify` / `tools.reminders`)
+- **ไม่แตะ `requirements.txt`** — sqlite3 / imaplib / smtplib / email / threading เป็น stdlib ทั้งหมด
+- **ไม่เพิ่ม tool กลุ่มนี้ใน `jusmin.py` (CLI)** — เหตุผลเดียวกับ youtube/weather: memory/tasks/email ใช้ได้ แต่ reminder เด้งต้องมีหน้าเว็บ poll ถึงจะครบ ทำครึ่งๆ ใน CLI จะสับสน
+
+**personality.py** — เติมย่อหน้าใน `SYSTEM_PROMPT` บอก persona ว่าจำเรื่องผู้ใช้ได้ / จดงาน / ตั้งเตือน / เช็ค-ส่งเมล / สรุปวันได้
++ ให้ `remember()` ข้อมูลส่วนตัวที่น่าจะใช้ภายหลังเอง + แปลงเวลากำกวมเป็น ISO ก่อนเรียก tool + ส่งเมลต้องทวนยืนยันก่อน
+
 ## ตำแหน่งที่ตั้ง (geolocation) — `get_weather()` ใช้พิกัดจริงของเบราว์เซอร์
 
 ผู้ใช้ถามอากาศ "ที่นี่"/ไม่ระบุเมือง แล้วต้องไม่ต้องพิมพ์ชื่อเมืองเอง — โครงเดียวกับ folder picker / `_pending_action` เป๊ะ: **ข้อมูล (พิกัด) อยู่ฝั่ง browser แต่ tool รันฝั่ง server** เลยต้องให้ client แนบพิกัดมากับ request
@@ -296,12 +398,19 @@ jusmin-ai/
 ├── server.py         # FastAPI backend — เสิร์ฟหน้าเว็บ + /api/chat + /api/quota + /api/tts
 ├── personality.py    # SYSTEM_PROMPT ที่ jusmin.py กับ server.py ใช้ร่วมกัน
 ├── tools/            # tool registry (package) — server.py ยัง `from tools import ...` / `import tools` ได้เหมือนเดิม
-│   ├── __init__.py   #   re-export ทุกชื่อ public
+│   ├── __init__.py   #   re-export ทุกชื่อ public + `from . import notify, reminders`
 │   ├── _state.py     #   pending_action (คำสั่งที่ส่งให้ app.js ทำจริงในเบราว์เซอร์) — weather+youtube share กัน
+│   ├── db.py         #   SQLite layer (jusmin.db) — connect/query/execute + schema memory/tasks/reminders
 │   ├── web.py        #   search_web (ddgs)
 │   ├── weather.py    #   get_weather + set_client_location + view โฟกัส (now/rain/temp/wind/uv/sun/forecast)
 │   ├── youtube.py    #   open_youtube / control_youtube (yt-dlp)
-│   └── files.py      #   list_files/read_file/create_folder/write_file/delete_path + audit log + persist folder
+│   ├── files.py      #   list_files/read_file/create_folder/write_file/delete_path + audit log + persist folder
+│   ├── memory.py     #   remember/recall/forget + memory_preamble() (server.py prepend ทุกเทิร์น)
+│   ├── tasks.py      #   add_task/list_tasks/complete_task
+│   ├── reminders.py  #   add_reminder/list_reminders/cancel_reminder + check_due() (scheduler เรียก)
+│   ├── notify.py     #   queue+lock — check_due() push, /api/notifications drain, js/notify.js poll
+│   ├── mail.py       #   check/read/search/save_attachment/send_email (imaplib+smtplib, .env, ทุกกล่อง+ไฟล์แนบ) + unread_count()
+│   └── briefing.py   #   daily_briefing() — วันที่ไทย+งาน+เตือน+เมลค้าง (LLM เรียก get_weather() ต่อเอง)
 ├── tts.py            # เสียงพูดไทยฝั่ง server (vachanatts engine vachana / gTTS)
 ├── static/
 │   ├── index.html    # โครง HUD — <link style.css> + <script type="module" src="js/main.js">
@@ -319,8 +428,9 @@ jusmin-ai/
 │       ├── chatui.js     #   addLine/typeText/announceSystemNotice/setThinking/openUrlWithFallback
 │       ├── hud.js        #   boot + particles + idle-tilt + clock + latency graph + quota gauge + link health
 │       ├── settings.js   #   sidebar ⚙ + ปุ่มเลือกโฟลเดอร์
-│       └── geo.js        #   navigator.geolocation -> S.clientGeo (แนบไป /api/chat)
-├── voices/  logs/  venv/  .env  file_access_config.json   # ไม่ commit
+│       ├── geo.js        #   navigator.geolocation -> S.clientGeo (แนบไป /api/chat)
+│       └── notify.js     #   poll /api/notifications ทุก 10 วิ -> announceSystemNotice + speak (reminder เด้ง)
+├── voices/  logs/  venv/  .env  file_access_config.json  jusmin.db   # ไม่ commit
 ├── .gitignore
 └── requirements.txt
 ```
@@ -358,4 +468,13 @@ python server.py
 
 ## งานถัดไปสำหรับ Claude Code
 
-Step 0-1 กับเว็บ UI เสร็จแล้ว งานถัดไปคือ **Step 2: เพิ่ม memory ถาวร (SQLite)** ให้ จัสมิน จำเรื่องเก่า-ใหม่ได้ข้ามเซสชัน (ตอนนี้ restart server ทีก็ลืมบทสนทนาหมด)
+Step 0-2 + เว็บ UI + กลุ่ม tool เลขา (กลุ่ม A: memory/tasks/reminders/email/briefing) เสร็จแล้ว
+
+**ยังเหลือจาก roadmap "จัสมิน เลขาสมบูรณ์" (ทำเมื่อผู้ใช้สั่ง):**
+- กลุ่ม B — ปฏิทิน (Google Calendar) + สภาพจราจร/เส้นทาง + ค่าเงิน/หุ้น
+- กลุ่ม C — สรุปข่าว + จดโน้ตยาว/สรุปเอกสาร + timer/นาฬิกาปลุก + คุมสมาร์ตโฮม (Step 3-5 เดิม)
+
+**หนี้ทางเทคนิคของกลุ่ม A ที่ควรรู้:**
+- `send_email` มี confirmation flow จริงในโค้ดแล้ว (2 ขั้น `_pending_send` + `confirm=True`) — แต่ `delete_path` / `control_youtube` ยังคุมด้วย docstring อย่างเดียว ถ้าเจอเคส LLM ลบเองโดยไม่ถาม ควรทำ flow แบบเดียวกับ `send_email`
+- reminder เด้งเฉพาะตอนเปิดแท็บ (ผู้ใช้เลือกเอง) — ถ้าอยากได้ Windows notification ต้องทำ layer แยกฝั่ง server
+- `memory_preamble()` prepend ทุกเทิร์น = fact ซ้ำใน history เรื่อยๆ ถ้า fact เยอะขึ้นมากอาจเปลือง token ควรเปลี่ยนไป inject ผ่าน `system_instruction` + rebuild chat session แทน

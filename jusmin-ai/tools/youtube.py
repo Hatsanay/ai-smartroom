@@ -15,7 +15,8 @@ _youtube_queue_index: int = -1  # index ของเพลงที่กำล�
 # ในข้อความตอบ/ประวัติการคุย ผู้ใช้ feedback ว่า "สั่งลดเสียงแล้วรู้สึกเหมือนเพิ่มเอง" เลยให้ตอบระดับ
 # เสียงปัจจุบันกลับไปด้วยเสมอ ให้ จัสมิน มี context จริงมาอ้างอิงในบทสนทนาถัดไป ไม่ใช่เดามั่วๆ
 _YT_VOLUME_STEP = 25
-_youtube_volume = 100  # % ปัจจุบัน (ตามที่สั่งผ่าน tool นี้เท่านั้น — reset กลับ 100 ตอน stop เหมือนฝั่ง client)
+_YT_DEFAULT_VOLUME = 25  # ผู้ใช้ขอ: เปิด YouTube ใหม่ทุกครั้งเริ่มที่ 25% (ต้องตรงกับ YT_DEFAULT_VOLUME ใน youtube.js)
+_youtube_volume = _YT_DEFAULT_VOLUME  # % ปัจจุบัน (ตามที่สั่งผ่าน tool นี้) — reset กลับค่าเริ่มต้นตอนเปิดเพลงใหม่/next/stop เหมือนฝั่ง client
 
 
 def _search_youtube(query: str, count: int = _YT_SEARCH_COUNT) -> list[dict]:
@@ -37,8 +38,9 @@ def open_youtube(query: str = "") -> str:
     Returns:
         ข้อความยืนยันสั้นๆ สำหรับตอบผู้ใช้
     """
-    global _youtube_queue, _youtube_queue_index
+    global _youtube_queue, _youtube_queue_index, _youtube_volume
     query = query.strip()
+    _youtube_volume = _YT_DEFAULT_VOLUME  # เปิด YouTube ใหม่ = เสียงกลับไปที่ค่าเริ่มต้น 25%
     if not query:
         _youtube_queue = []
         _youtube_queue_index = -1
@@ -59,7 +61,13 @@ def open_youtube(query: str = "") -> str:
     _youtube_queue = results
     _youtube_queue_index = 0
     first = results[0]
-    _state.pending_action = {"type": "play_youtube", "video_id": first["id"], "title": first["title"]}
+    # reset_volume=True -> app.js ตั้งเสียงกลับไป 25% (เปิดใหม่เท่านั้น ไม่ใช่ตอน "เปลี่ยนเพลง")
+    _state.pending_action = {
+        "type": "play_youtube",
+        "video_id": first["id"],
+        "title": first["title"],
+        "reset_volume": True,
+    }
     return f'เปิดเพลง "{first["title"]}" ให้แล้วค่ะ'
 
 
@@ -89,14 +97,20 @@ def control_youtube(action: str) -> str:
             return "หมดคิวเพลงที่ค้นไว้แล้วค่ะ ลองสั่งเปิดเพลงใหม่ได้เลยค่ะ"
         _youtube_queue_index += 1
         track = _youtube_queue[_youtube_queue_index]
-        _state.pending_action = {"type": "play_youtube", "video_id": track["id"], "title": track["title"]}
+        # เปลี่ยนเพลง = คงระดับเสียงเดิมไว้ (reset_volume ไม่ส่ง / False) — ผู้ใช้ขอชัดเจน
+        _state.pending_action = {
+            "type": "play_youtube",
+            "video_id": track["id"],
+            "title": track["title"],
+            "reset_volume": False,
+        }
         return f'เปลี่ยนเป็นเพลง "{track["title"]}" ให้แล้วค่ะ'
 
     if action in {"pause", "resume", "stop", "volume_up", "volume_down", "fullscreen", "exit_fullscreen"}:
         if action == "stop":
             _youtube_queue = []
             _youtube_queue_index = -1
-            _youtube_volume = 100
+            _youtube_volume = _YT_DEFAULT_VOLUME
         elif action == "volume_up":
             _youtube_volume = min(100, _youtube_volume + _YT_VOLUME_STEP)
         elif action == "volume_down":

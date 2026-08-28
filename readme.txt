@@ -37,11 +37,19 @@ Jusmin — AI Assistant Project
 4. ติดตั้ง dependency ทั้งหมด
      pip install -r requirements.txt
 
-5. สร้างไฟล์ .env ในโฟลเดอร์ jusmin-ai/ (โฟลเดอร์เดียวกับ server.py) ใส่ Gemini API key ของตัวเอง
-     GEMINI_API_KEY=ใส่คีย์ของคุณตรงนี้
+5. ทำไฟล์ .env จากไฟล์ตัวอย่าง (อยู่ในโฟลเดอร์ jusmin-ai/ โฟลเดอร์เดียวกับ server.py)
+     Windows      :  copy .env.example .env
+     macOS/Linux  :  cp .env.example .env
 
-   ไฟล์นี้ต้องสร้างเองเสมอ — ไม่ได้อยู่ใน repo (อยู่ใน .gitignore ไว้เพราะมี key จริง) ถ้าไม่สร้าง
-   โปรแกรมจะ error ทันทีตอนเริ่มรัน
+   แล้วเปิด .env ใส่ Gemini API key ของตัวเองในบรรทัด GEMINI_API_KEY=
+   (ไฟล์ .env จริงไม่ได้อยู่ใน repo — อยู่ใน .gitignore เพราะมี key จริง ส่วน .env.example อยู่ใน repo
+    เป็นแค่แม่แบบ ไม่มีค่า secret) ถ้าไม่ทำ .env โปรแกรมจะ error ทันทีตอนเริ่มรัน
+
+   อีเมล (ไม่บังคับ) — ถ้าอยากให้ Jusmin เช็ค/อ่าน/ส่งเมล Gmail ได้ ใส่ค่าในบรรทัด EMAIL_ADDRESS=
+   กับ EMAIL_APP_PASSWORD= ที่มีอยู่แล้วใน .env (คำอธิบายแต่ละ key อยู่ในคอมเมนต์ของ .env.example)
+   EMAIL_APP_PASSWORD คือ App Password 16 หลักจาก myaccount.google.com/apppasswords (ต้องเปิด
+   2-Step Verification ก่อน — ไม่ใช่รหัสผ่าน Gmail ปกติ) ไม่ใส่ก็ได้ ฟีเจอร์อื่นทำงานปกติ
+   ตั้ง EMAIL_SENDER_NAME= เป็นชื่อคุณได้ด้วย จะไปโผล่ในลายเซ็นท้ายเมลทุกฉบับที่ Jusmin ส่ง
 
 
 วิธีรัน
@@ -64,4 +72,8 @@ Jusmin — AI Assistant Project
   python server.py ใหม่) ไม่มี auto-reload
 - หน้าเว็บจะเปิดโหมด "ฟังตลอด" (wake word พูดคำว่า "จัสมิน") เป็นค่าเริ่มต้นทันที เบราว์เซอร์จะขอ
   สิทธิ์ไมโครโฟนเอง
+- Jusmin จำเรื่องผู้ใช้ / งาน / การเตือน ไว้ในไฟล์ jusmin-ai/jusmin.db (SQLite, สร้างเองอัตโนมัติ,
+  อยู่ใน .gitignore) จำได้ข้าม restart — ลบไฟล์นี้ทิ้งคือล้างความจำทั้งหมด
+- การเตือน (reminder) จะเด้ง + พูดเฉพาะตอนเปิดหน้าเว็บค้างไว้เท่านั้น (ไม่มี Windows notification)
+  ปิดแท็บแล้วพอเปิดใหม่ การเตือนที่เลยเวลาไปแล้วจะเด้งย้อนให้ทันที
 - รายละเอียดสถาปัตยกรรม เหตุผลการออกแบบ และ decision ต่างๆ ทั้งหมดอยู่ใน jusmin-ai/CLAUDE.md

@@ -67,20 +67,46 @@ if (SpeechRecognitionCtor) {
 
 /* ---------- โหมดฟังตลอด: พูด "จัสมิน" แล้วตามด้วยคำสั่งได้เลย ---------- */
 
-// จับได้ทั้งที่ Google STT ถอดเป็นอังกฤษ (jusmin/jasmine/yasmin) และไทยหลายสะกด (จัสมิน/จัสมีน/แจสมิน/จาสมิน)
-const WAKE_WORD_PATTERNS = [/jusmin/i, /jasmin(e)?/i, /yasmin(e)?/i, /จั?[สด]ม[ีิ]น/, /แจ[สด]ม[ีิ]น/, /จาส?ม[ีิ]น/];
+// Google STT ถอดเสียง "จัสมิน" ออกมาได้สารพัดแบบ (อังกฤษบ้าง ไทยหลายสะกดบ้าง สลับ จ/ย/ญ, ส/ด/ซ/ช,
+// เติม/ตัดสระ, ใส่วรรณยุกต์, เว้นวรรคกลางคำ) — รวม pattern ให้กว้างที่สุดเท่าที่ยังไม่ชนคำไทยปกติ
+// T = วรรณยุกต์/ไม้ไต่คู้/การันต์ ที่ STT ชอบแถมมา (optional คั่นได้ทุกพยางค์)
+const T = '[็-๎]?';
+const WAKE_WORD_PATTERNS = [
+  // ---- โรมัน / อังกฤษ ----
+  /j[ua]s?\s?m[iy]ne?/i,       // jusmin jusmine jasmin jasmine jusmn jas min
+  /j[ae]z\s?m[iy]ne?/i,        // jazmin jazmine jezmin
+  /y[ae]s\s?m[iy]ne?/i,        // yasmin yasmine yesmin
+  /[cg][ha][ts]?\s?m[iy]ne?/i, // chasmin gasmin chatmin (จ ~ ch/j)
+  /jes\s?m[iy]ne?/i,           // jesmin
+  /jus\s?m[ae]n/i,             // jusman
+  /just[iy]n/i,                // justin (STT มักได้ยินเป็นชื่อนี้)
+  // ---- ไทย: แกน "จัส/จัด/จาด/ยัส/ญัส..." + "มิน/มีน/มิล/มน" (+ หาง "ทร์/์" ที่ STT ชอบเติม) ----
+  new RegExp('[จยญชฌ]' + T + '[ัาะ]?' + T + '[รฤ]?[สซดชฉศษทถ]' + T + '\\s?ม' + T + '[ิีึ]?' + T + '[นลณมฬ](?:ทร?์?|์)?'),
+  // ---- ไทย: ขึ้นต้น "แจส / แจ๊ส / แยส / แจ็ส" ----
+  new RegExp('แ[จยญ]' + T + '[สซดช]' + T + '\\s?ม' + T + '[ิี]?' + T + '[นลม](?:ทร?์?|์)?'),
+  // ---- ไทย: หล่นตัว จ นำ ("รัสมิน / อัสมิน / ทัสมิน / นัสมิน / ลัสมิน") ----
+  /[รลอทนห]ั?[สซด]\s?ม[ิี]?น/,
+  // ---- ไทย: "จรัสมิน / จัดสมิน / จัสมินทร์ / จัสมิน์" ----
+  /จ[ัา]?[รด]?[สซด]\s?ม[ิี]?น(?:ทร?์?)?/,
+  // ---- ไทย: "จัสติน / แจสติน" (STT ได้ยินเป็นชื่อจัสติน) ----
+  /แ?จ[ัา]?[สซด]\s?ต[ิี]?น/,
+  // ---- ไทย: สั้นๆ แค่ "จัส / จั๊ส / แจ๊ส / จัสมิ" เผื่อ STT ตัดหางคำ (ไม่เอา "จัด" เดี่ยวๆ = คำไทยปกติ)
+  //          ใช้ lookbehind กันไม่ให้กิน space นำหน้า (จะได้ไม่ตัดคำสั่งเพี้ยนตอนมีคำนำหน้าคำปลุก) ----
+  /(?<=^|\s)(?:จั[่้๊๋]?ส|แจ[่้๊๋]?ส|จัสมิ|จั[่้๊๋]?ด[สซ])(?=\s|$|ม)/,
+];
 
 // เรียกชื่อเฉยๆ ไม่มีคำสั่งตาม - ตอบรับสั้นๆ ด้วยเสียงจริง สุ่มสลับไว้กันซ้ำจำเจ
 const WAKE_ACK_PHRASES = ['ค่ะ มีอะไรให้ช่วยคะ', 'ว่าไงคะบอส', 'ฟังอยู่ค่ะ', 'คะ พร้อมค่ะ'];
 
 function extractWakeCommand(transcript) {
+  // เลือก match ที่อยู่ต้นประโยคที่สุด (เผื่อมีหลาย pattern โดน) แล้วคืนส่วนที่เหลือหลังคำปลุกเป็นคำสั่ง
+  let best = null;
   for (const pattern of WAKE_WORD_PATTERNS) {
-    const match = transcript.match(pattern);
-    if (match) {
-      return transcript.slice(match.index + match[0].length).trim();
-    }
+    const m = transcript.match(pattern);
+    if (m && (best === null || m.index < best.index)) best = { index: m.index, end: m.index + m[0].length };
   }
-  return null;
+  if (best === null) return null;
+  return transcript.slice(best.end).replace(/^[\s,.ๆ]+/, '').trim();
 }
 
 let wakeRecognition = null;
@@ -215,7 +241,8 @@ function runWakeRecognition() {
       // เก็บ log ไว้เผื่อ debug กรณี "พูด จัสมิน แล้วไม่ติด" — บางทีสาเหตุคือ Google STT ถอดเสียง
       // "จัสมิน" เป็นคำไทยที่สะกดต่างจาก WAKE_WORD_PATTERNS ที่มี ไม่ใช่ปัญหาจังหวะ/ไมค์เลย
       // เปิด DevTools console (F12) ดู "[wake] missed:" เทียบว่า STT ได้ยินเป็นคำว่าอะไรจริงๆ
-      console.debug('[wake] missed:', transcript);
+      // (ใช้ console.log ไม่ใช่ debug จะได้เห็นเลยไม่ต้องเปิด Verbose — เอาคำที่ขึ้นมาบอกได้ จะเพิ่ม pattern ให้)
+      console.log('[wake] missed:', transcript);
       return; // ไม่มีคำว่า จัสมิน ในประโยคนี้ ข้ามไป
     }
     if (!command) {

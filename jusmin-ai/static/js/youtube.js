@@ -12,11 +12,23 @@ let ytPlayerReady = false; // true หลัง onReady event จริงเท
 // ก็ตาม (ตัว iframe ข้างในยังไม่ได้เชื่อมต่อ postMessage เสร็จ) เป็นเรื่องจริงที่เอกสาร YouTube ระบุไว้
 let ytPendingVideo = null; // {id, title} รอเล่นถ้ายังโหลด IFrame API/player ไม่เสร็จตอนสั่งมา
 let ytPendingCommand = null; // action ล่าสุดที่รอทำ ถ้า controlYoutube() ถูกเรียกก่อน player ready จริง
-let ytVolume = 100; // baseline volume ที่ผู้ใช้ตั้งไว้ล่าสุดผ่าน volume_up/volume_down (คนละตัวกับตอน duck ชั่วคราว)
+// ผู้ใช้ขอ: ทุกครั้งที่เปิด YouTube ใหม่ ให้เริ่มที่ 25% เสมอ (ไม่ค้างค่าที่เคยปรับไว้ข้ามเพลง)
+const YT_DEFAULT_VOLUME = 25;
+let ytVolume = YT_DEFAULT_VOLUME; // baseline volume ที่ผู้ใช้ตั้งไว้ล่าสุดผ่าน volume_up/volume_down (คนละตัวกับตอน duck ชั่วคราว)
 // หูมนุษย์รับรู้ความดังแบบ logarithmic ไม่ใช่ linear — ทดสอบยืนยันแล้วว่า setVolume() บน player จริง
 // เปลี่ยนค่าไปตรงตามที่สั่งเป๊ะ (100->80 จริง) แต่ผู้ใช้รายงานว่า "สั่งลดแล้วไม่รู้สึกว่าลดเลย" เพราะ
 // step เดิม (20) เล็กเกินไปจนหูแทบไม่รู้สึกถึงความต่าง — ปรับเป็น 25 ให้รู้สึกถึงการเปลี่ยนแปลงชัดเจนขึ้น
 const YT_VOLUME_STEP = 25;
+
+// เรียกทุกครั้งที่เริ่มวิดีโอใหม่ (player เพิ่ง ready หรือ loadVideoById เพลงใหม่) — รีเซ็ต baseline กลับ
+// ค่าเริ่มต้น แล้วสั่ง setVolume จริงถ้าทำได้ตอนนี้ (ถ้า จัสมิน กำลังพูด = duck ค้างอยู่ ปล่อยให้
+// restoreYoutubeVolume() หยิบค่าใหม่ไปใช้เองตอน TTS จบ)
+function applyDefaultVolume() {
+  ytVolume = YT_DEFAULT_VOLUME;
+  if (S.ytPlayer && ytPlayerReady && !S.ttsSpeaking && typeof S.ytPlayer.setVolume === 'function') {
+    S.ytPlayer.setVolume(YT_DEFAULT_VOLUME);
+  }
+}
 
 function loadYtApiScript() {
   if (document.getElementById('yt-iframe-api')) return;
@@ -29,25 +41,28 @@ function loadYtApiScript() {
 window.onYouTubeIframeAPIReady = function onYouTubeIframeAPIReady() {
   ytApiReady = true;
   if (ytPendingVideo) {
-    const { id, title } = ytPendingVideo;
+    const { id, title, resetVolume } = ytPendingVideo;
     ytPendingVideo = null;
-    playYoutubeVideo(id, title);
+    playYoutubeVideo(id, title, resetVolume);
   }
 };
 
-export function playYoutubeVideo(videoId, title) {
+// resetVolume = true เฉพาะตอน "เปิด YouTube ใหม่" (open_youtube) — ตอน "เปลี่ยนเพลง/เพลงถัดไป" (next)
+// ส่ง false มา ให้คงระดับเสียงที่ผู้ใช้ปรับไว้ (loadVideoById ไม่แตะ volume ของ player อยู่แล้ว)
+export function playYoutubeVideo(videoId, title, resetVolume = false) {
   ytPanelTitle.textContent = title || videoId;
   ytPanel.classList.add('visible');
 
   if (!ytApiReady || (S.ytPlayer && !ytPlayerReady)) {
     // ยังโหลด script ไม่เสร็จ หรือ player ตัวเดิมยังไม่ ready จริง (รอ onReady) — เก็บคิวไว้ก่อน
     loadYtApiScript();
-    ytPendingVideo = { id: videoId, title };
+    ytPendingVideo = { id: videoId, title, resetVolume };
     return;
   }
 
   if (S.ytPlayer && typeof S.ytPlayer.loadVideoById === 'function') {
     S.ytPlayer.loadVideoById(videoId);
+    if (resetVolume) applyDefaultVolume(); // เปิดใหม่เท่านั้น = กลับไป 25% — เปลี่ยนเพลงคงเสียงเดิม
     return;
   }
 
@@ -62,6 +77,7 @@ export function playYoutubeVideo(videoId, title) {
 // พอ ready แล้วค้างเป็น true ตลอดอายุ player ตัวนี้ ทำคิวที่ค้างไว้ระหว่างรอให้เรียบร้อย (ถ้ามี)
 function onYtPlayerReady() {
   ytPlayerReady = true;
+  applyDefaultVolume(); // เปิดเพลงครั้งแรก -> ตั้งเสียงเริ่มต้น 25% (autoplay เริ่มที่ default ของ YT ก่อนแป๊บนึง)
   if (ytPendingVideo) {
     const { id, title } = ytPendingVideo;
     ytPendingVideo = null;
@@ -98,7 +114,7 @@ export function controlYoutube(action) {
   } else if (action === 'stop') {
     if (typeof S.ytPlayer.stopVideo === 'function') S.ytPlayer.stopVideo();
     S.ytIsPlaying = false;
-    ytVolume = 100; // เริ่มเซสชันฟังเพลงครั้งถัดไปที่ 100% เสมอ ไม่ค้างค่าที่เคยปรับไว้ข้ามเซสชันเก่า
+    ytVolume = YT_DEFAULT_VOLUME; // เริ่มเซสชันฟังเพลงครั้งถัดไปที่ค่าเริ่มต้น (25%) เสมอ ไม่ค้างค่าที่เคยปรับไว้
     exitYoutubeFullscreen(); // ปิดเพลง -> ออกจากเต็มจอ + ยกเลิกแผนกลับไปเต็มจอ (ไม่ให้ค้างจอดำ/เด้งกลับ)
     ytPanel.classList.remove('visible');
   } else if (action === 'volume_up' || action === 'volume_down') {

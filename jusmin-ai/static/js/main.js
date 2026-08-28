@@ -11,6 +11,7 @@ import { startWakeMode, startFollowUpWindow } from './voice.js';
 import { renderWaveRing } from './wave.js';
 import { refreshClientGeo, GEO_MAX_AGE_MS, GEO_RETRY_MS } from './geo.js';
 import './settings.js';
+import './notify.js'; // poll /api/notifications -> reminder ที่ถึงเวลาเด้ง
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -44,7 +45,7 @@ form.addEventListener('submit', async (e) => {
     if (data.action?.type === 'open_url' && data.action.url) {
       openUrlWithFallback(data.action.url);
     } else if (data.action?.type === 'play_youtube' && data.action.video_id) {
-      playYoutubeVideo(data.action.video_id, data.action.title);
+      playYoutubeVideo(data.action.video_id, data.action.title, data.action.reset_volume);
     } else if (data.action?.type === 'youtube_control' && data.action.action) {
       controlYoutube(data.action.action);
     } else if (data.action?.type === 'show_weather' && data.action.data) {

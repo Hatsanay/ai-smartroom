@@ -1,7 +1,8 @@
 import os
+import threading
 import time
 import tkinter
-from datetime import date
+from datetime import date, datetime
 from tkinter import filedialog
 from typing import Optional
 
@@ -17,15 +18,30 @@ from pydantic import BaseModel
 import tools
 from personality import SYSTEM_PROMPT, strip_markdown
 from tools import (
+    add_reminder,
+    add_task,
+    cancel_reminder,
+    check_email,
+    complete_task,
+    daily_briefing,
     control_youtube,
     create_folder,
     delete_path,
+    forget,
     get_weather,
     list_files,
+    list_reminders,
+    list_tasks,
     open_youtube,
     pop_pending_action,
+    read_email,
     read_file,
+    recall,
+    remember,
+    save_attachment,
+    search_email,
     search_web,
+    send_email,
     write_file,
 )
 from tts import synthesize as tts_synthesize
@@ -52,6 +68,21 @@ chat = client.chats.create(
             create_folder,
             write_file,
             delete_path,
+            remember,
+            recall,
+            forget,
+            add_task,
+            list_tasks,
+            complete_task,
+            add_reminder,
+            list_reminders,
+            cancel_reminder,
+            check_email,
+            read_email,
+            search_email,
+            save_attachment,
+            send_email,
+            daily_briefing,
         ],
     ),
 )
@@ -99,6 +130,25 @@ def _parse_quota_error(e: genai_errors.ClientError) -> tuple[Optional[int], floa
     return limit, retry_seconds
 
 
+_TH_WD = ("จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์", "อาทิตย์")
+_TH_MON = (
+    "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+    "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม",
+)
+
+
+def _now_preamble() -> str:
+    """แปะเวลาปัจจุบันหน้าทุกข้อความ — Gemini ไม่รู้เวลาจริงเอง ถ้าไม่บอกจะเดา (มักอิงยุคของ training
+    data เลยเพี้ยนเป็นปีก่อน) ทั้งตอนตอบ "กี่โมงแล้ว" และตอนคำนวณเวลาสัมพัทธ์ให้ add_reminder/add_task"""
+    n = datetime.now()
+    return (
+        f"(เวลาปัจจุบันตามนาฬิกาเครื่องผู้ใช้: วัน{_TH_WD[n.weekday()]}ที่ {n.day} {_TH_MON[n.month - 1]} "
+        f"ค.ศ. {n.year} เวลา {n:%H:%M} น. — รูปแบบ ISO: {n:%Y-%m-%dT%H:%M:%S} — "
+        f"ยึดค่านี้เป็นเวลาปัจจุบันเสมอ และใช้คำนวณเวลาสัมพัทธ์ เช่น 'อีก 15 นาที' / 'พรุ่งนี้ 9 โมง' / "
+        f"'บ่าย 3 วันศุกร์')\n"
+    )
+
+
 class ChatRequest(BaseModel):
     message: str
     # พิกัดจาก navigator.geolocation ของเบราว์เซอร์ (ถ้าผู้ใช้อนุญาต) — {"lat": .., "lon": .., "label": ..}
@@ -136,8 +186,11 @@ def chat_endpoint(req: ChatRequest) -> ChatResponse:
     # พิกัดเบราว์เซอร์มีผลแค่ระหว่าง request นี้ — เซ็ตก่อนเรียก LLM แล้วล้างทิ้งใน finally ทุกทางออก
     # (เหมือน pop_pending_action) กันพิกัดเก่าค้างไปโผล่ใน request ถัดไปที่อาจไม่ได้ส่ง geo มา
     tools.set_client_location(req.geo)
+    # แปะ fact ที่จำไว้ไว้หน้าข้อความทุกเทิร์น -> จัสมิน เห็นข้อมูลผู้ใช้เสมอ (+ fact ที่เพิ่งเพิ่มด้วย
+    # remember() มีผลทันทีในเซสชันเดียวกัน ไม่ต้อง restart) — คืน "" ถ้ายังไม่มี fact
+    msg = _now_preamble() + tools.memory.memory_preamble() + req.message
     try:
-        response = chat.send_message(req.message)
+        response = chat.send_message(msg)
         quota_state["used_today"] += 1
         return ChatResponse(reply=strip_markdown(response.text), action=pop_pending_action())
     except genai_errors.ClientError as e:
@@ -187,6 +240,13 @@ def tts_endpoint(req: TTSRequest) -> Response:
     return Response(content=audio_bytes, media_type=media_type)
 
 
+@app.get("/api/notifications")
+def notifications_endpoint(response: Response) -> dict:
+    # reminder ที่ scheduler thread เจอว่าถึงเวลาแล้ว — static/js/notify.js poll เอาไปแจ้ง + ให้ จัสมิน พูด
+    response.headers["Cache-Control"] = "no-store"
+    return {"items": tools.notify.drain()}
+
+
 class FolderStatus(BaseModel):
     path: Optional[str] = None
 
@@ -216,6 +276,20 @@ def browse_folder_endpoint() -> FolderStatus:
 
 
 app.mount("/", StaticFiles(directory="static", html=True), name="static")
+
+
+# scheduler เดียว รันตลอดชีวิต process — เช็ค reminder ที่ถึงเวลาทุก ~20 วิ (daemon=True ตายพร้อม server)
+# เจอแล้ว push เข้า tools.notify queue ให้ /api/notifications ส่งต่อให้หน้าเว็บ
+def _scheduler_loop() -> None:
+    while True:
+        try:
+            tools.reminders.check_due()
+        except Exception:
+            pass
+        time.sleep(20)
+
+
+threading.Thread(target=_scheduler_loop, daemon=True, name="jusmin-scheduler").start()
 
 
 if __name__ == "__main__":

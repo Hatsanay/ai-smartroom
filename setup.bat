@@ -61,17 +61,24 @@ pip install -r requirements.txt
 if errorlevel 1 ( echo [setup] pip install failed - check the errors above & pause & exit /b 1 )
 
 echo [setup] 3/3  Setting up jusmin-ai\.env ...
-if exist ".env" goto ENV_OK
+if exist ".env" ( echo        .env already exists - keeping it & goto ENV_OK )
+if not exist ".env.example" ( echo        .env.example missing - make .env yourself with GEMINI_API_KEY=... & goto ENV_OK )
+copy /y ".env.example" ".env" >nul
 set "GKEY="
 set /p GKEY=        Paste your Gemini API key ^(Enter to skip and edit .env later^):
-> .env echo GEMINI_API_KEY=%GKEY%
-if "%GKEY%"=="" ( echo        wrote empty .env - remember to edit it! ) else ( echo        wrote .env )
+if not defined GKEY goto ENV_TEMPLATE
+powershell -NoProfile -Command "$o=Get-Content -LiteralPath '.env.example' | ForEach-Object { if ($_ -eq 'GEMINI_API_KEY=') { 'GEMINI_API_KEY=' + $env:GKEY } else { $_ } }; [System.IO.File]::WriteAllLines((Join-Path (Get-Location) '.env'), $o, (New-Object System.Text.UTF8Encoding $false))"
+echo        wrote .env with your Gemini key
+goto ENV_OK
+:ENV_TEMPLATE
+echo        wrote .env from template - open it and add your Gemini key before dev.bat
 :ENV_OK
 
 echo.
 echo ============================================================
 echo  [setup] Done.
 echo   - Gemini API key ^(free^): https://aistudio.google.com  -> put it in  jusmin-ai\.env
+echo   - Optional: add EMAIL_ADDRESS + EMAIL_APP_PASSWORD in jusmin-ai\.env for Gmail
 echo   - Start the app:  double-click  dev.bat  in the repo root
 echo ============================================================
 pause
