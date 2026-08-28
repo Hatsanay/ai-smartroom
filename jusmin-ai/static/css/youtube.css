@@ -1,0 +1,91 @@
+/* ---------- YouTube player: มุมซ้ายกลาง (ระหว่าง panel-tl กับ panel-bl) ---------- */
+/* ซ่อนไว้เป็นค่าเริ่มต้น โผล่มาเฉพาะตอนกำลังเล่นเพลงจริงเท่านั้น (app.js toggle คลาส .visible) */
+
+.yt-panel {
+  position: fixed;
+  left: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+  width: 220px;
+  background: rgba(3, 10, 16, 0.9);
+  border: 1px solid var(--cyan-dim);
+  border-radius: 4px;
+  padding: 8px;
+  box-shadow: 0 0 16px rgba(77, 246, 255, 0.15);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.yt-panel.visible { opacity: 1; pointer-events: auto; }
+.yt-panel-title {
+  font-size: 10px;
+  color: var(--cyan-dim);
+  letter-spacing: 0.02em;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#ytPlayerMount {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 3px;
+  overflow: hidden;
+  background: #000;
+}
+#ytPlayerMount iframe { width: 100%; height: 100%; display: block; border: none; }
+
+/* "เต็มจอ" (control_youtube('fullscreen')) — ขยายเครื่องเล่นเต็ม viewport ด้วย CSS ล้วน ไม่ต้องมี
+   user gesture เลย (Fullscreen API จริงต้องมี) เลยสั่งผ่านเสียงได้ทันที — ทับ layout ของ .yt-panel
+   ปกติทั้งหมด (position/size/ตำแหน่ง/กรอบ) */
+.yt-panel.maximized {
+  position: fixed;
+  inset: 0;
+  top: 0;
+  left: 0;
+  transform: none;
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  z-index: 500;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: #000;
+}
+.yt-panel.maximized .yt-panel-title { display: none; }
+.yt-panel.maximized #ytPlayerMount {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+
+/* ปุ่มออกจากเต็มจอ — โผล่เฉพาะตอน .maximized (นอกจากกด Esc / สั่งด้วยเสียง "ออกจากเต็มจอ") */
+.yt-exit-fs { display: none; }
+.yt-panel.maximized .yt-exit-fs {
+  display: block;
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  border-radius: 4px;
+  background: rgba(3, 10, 16, 0.55);
+  border: 1px solid var(--cyan-dim);
+  color: var(--cyan);
+  font-size: 15px;
+  cursor: pointer;
+  opacity: 0.45;
+  transition: opacity 0.2s;
+}
+.yt-panel.maximized .yt-exit-fs:hover { opacity: 1; }
+
+/* วิดีโอ YouTube ตอนเข้า real fullscreen (ขอซ้อนไว้ตอนมี gesture) — กัน width/height attribute ที่ YT ตั้งค้าง */
+#ytPlayerMount:fullscreen,
+#ytPlayerMount:-webkit-full-screen,
+iframe:fullscreen,
+iframe:-webkit-full-screen { width: 100% !important; height: 100% !important; }

@@ -1,0 +1,60 @@
+/* ---------- boot sequence ---------- */
+
+.boot {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  transition: opacity 0.6s ease, visibility 0.6s ease;
+}
+.boot.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.boot pre {
+  font-family: 'Share Tech Mono', monospace;
+  color: var(--cyan);
+  font-size: 15px;
+  line-height: 1.9;
+  text-shadow: 0 0 6px rgba(77, 246, 255, 0.6);
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+/* ---------- hologram overlay fx ---------- */
+
+.scanlines {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.04) 0px,
+    rgba(255, 255, 255, 0.04) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+
+.vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.6) 100%);
+}
+
+.frame-corner {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  border: 2px solid rgba(77, 246, 255, 0.5);
+  z-index: 6;
+  pointer-events: none;
+}
+.fc-tl { top: 14px; left: 14px; border-right: none; border-bottom: none; }
+.fc-tr { top: 14px; right: 14px; border-left: none; border-bottom: none; }
+.fc-bl { bottom: 14px; left: 14px; border-right: none; border-top: none; }
+.fc-br { bottom: 14px; right: 14px; border-left: none; border-top: none; }

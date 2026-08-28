@@ -109,7 +109,7 @@
 
 **เปิดวิดีโอเต็มจอ (`control_youtube('fullscreen')` / `'exit_fullscreen'`):**
 - **กลไกหลัก = CSS ไม่ใช่ Fullscreen API** — `requestYoutubeFullscreen()` ใน `app.js` แค่ `ytPanel.classList.add('maximized')` แล้ว CSS `.yt-panel.maximized { position:fixed; inset:0; width:100vw; height:100vh; z-index:500 }` ขยายเครื่องเล่นเต็ม viewport ของเบราว์เซอร์ — **ไม่ต้องมี user gesture เลย เลยสั่งผ่านเสียงได้ทันที ไม่มีปุ่มให้ผู้ใช้กดเปิดเอง** (ผู้ใช้ขอชัดเจนว่าห้ามมีปุ่มกด). ตั้ง flag `ytMaximized` ไว้ track สถานะ
-- **bonus real fullscreen**: หลัง add คลาสแล้ว ยังลอง `doRequestFullscreen(ytFullscreenTarget())` ต่อ (target = `ytPlayer.getIframe()` / fallback `document.getElementById('ytPlayerMount')` — YT API แทน `<div>` ด้วย `<iframe>` id เดิม ต้อง lookup ใหม่ ห้ามใช้ตัวแปรเก่าที่ค้าง node) — ได้เฉพาะตอนมี gesture (พิมพ์คำสั่ง + Enter, transient activation ~5 วิ) เพื่อซ่อนแถบเบราว์เซอร์เพิ่ม; สั่งด้วยเสียงจะ `.catch(() => {})` เงียบๆ ไม่ทำอะไรต่อ (CSS ทำให้เต็มจอเบราว์เซอร์ไปแล้ว)
+- **bonus real fullscreen**: หลัง add คลาสแล้ว ลอง `doRequestFullscreen(ytFullscreenTarget())` ต่อ **เฉพาะตอน `navigator.userActivation.isActive`** (มี transient activation จริง = พิมพ์คำสั่ง + Enter) เพื่อซ่อนแถบเบราว์เซอร์เพิ่ม — สั่งด้วยเสียง/auto-restore ไม่มี gesture เลยข้ามไปเลย (CSS `.maximized` เต็มจอเบราว์เซอร์ให้แล้ว) กัน Chrome log `requestFullscreen ... requires a user gesture` รก console. target = `ytPlayer.getIframe()` / fallback `document.getElementById('ytPlayerMount')` (YT API แทน `<div>` ด้วย `<iframe>` id เดิม ต้อง lookup ใหม่ ห้ามใช้ตัวแปรเก่าที่ค้าง node)
 - **ออกจากเต็มจอ**: สั่ง "ออกจากเต็มจอ" (`exit_fullscreen`) / กด `Esc` (keydown handler) / กดปุ่ม `#ytExitFs` (✕ มุมขวาบน โผล่เฉพาะตอน `.maximized`) — `exitYoutubeFullscreen()` ลบคลาส + `document.exitFullscreen()` ถ้า real FS ทำงานอยู่ + เคลียร์ `ytWasMaximizedBeforeEngage` (ยกเลิกการเด้งกลับเต็มจอ). `fullscreenchange` listener: ถ้าผู้ใช้กด Esc ออกจาก real FS ให้ลบ `.maximized` ตามด้วย ไม่ให้ค้างเต็มจอครึ่งๆ. `control_youtube('stop')` เรียก `exitYoutubeFullscreen()` ด้วยเสมอ (ปิดเพลงแล้วไม่เด้งกลับ)
 
 - **ย่อจอชั่วคราวตอนเรียก จัสมิน ระหว่างเต็มจอ (ผู้ใช้ขอ)** — เต็มจอ (`.maximized`) แล้วบัง HUD หลัก (เวฟ/สี/แชท z-index ต่ำกว่า 500) หมด เรียก จัสมิน ตอนนั้นเลยไม่เห็น feedback อะไร → แก้โดย **auto-ย่อจอชั่วคราว**: `renderWaveRing()` (loop ทุกเฟรมอยู่แล้ว) จับ **rising edge ของ `engagedActive`** ถ้าตอนนั้น `ytMaximized` เป็น true → `exitYoutubeFullscreen()` แล้วตั้ง `ytWasMaximizedBeforeEngage = true` (ต้องเรียก exit ก่อนแล้วตั้ง flag ทีหลัง เพราะ exit เคลียร์ flag). พอคุยจบ = `expireFollowUpWindow()` (จัสมิน พูดจบ + เงียบครบ 15 วิ ไม่มีถามต่อ — เป็น hook เดียวกับที่ปิดสีเขียว/แชท) → ถ้า `ytWasMaximizedBeforeEngage` และเพลงยังเล่นอยู่ (`ytPlayer && ytPanel.classList.contains('visible')`) → `requestYoutubeFullscreen()` กลับไปเต็มจอเอง. ถามต่อภายใน 15 วิ → timer reset (ผ่าน `startFollowUpWindow()` เดิม) → ยังย่อจออยู่จนกว่าจะเงียบจริง. สั่ง "ออกจากเต็มจอ"/`Esc`/ปิดเพลง ระหว่างช่วงนี้ → เคลียร์ `ytWasMaximizedBeforeEngage` ไม่เด้งกลับ. **ผลลัพธ์: ช่วงคุยกับ จัสมิน ได้ HUD หน้าหลักเต็มรูปแบบเป๊ะ ไม่ต้องทำ mini-overlay แยก**
@@ -288,25 +288,47 @@ Bar 40 อันรอบ core ขยับตามข้อมูลจริ�
 
 ## โครงสร้างโปรเจกต์ปัจจุบัน
 
+> **หมายเหตุ (refactor "แยกไฟล์"):** ตอนนี้แยกเป็นโมดูลย่อยแล้ว 3 จุด — `tools.py` → package `tools/`, `static/style.css` → `@import` ไฟล์ใน `static/css/`, `static/app.js` → **ES modules** ใน `static/js/` (entry = `js/main.js`, `<script type="module">`). พฤติกรรมเหมือนเดิมทุกอย่าง เป็น pure refactor
+
 ```
 jusmin-ai/
-├── jusmin.py         # agent loop แบบ CLI (Step 0, ยังใช้ speechSynthesis ของเบราว์เซอร์ไม่ได้เพราะเป็น CLI)
+├── jusmin.py         # agent loop แบบ CLI (Step 0)
 ├── server.py         # FastAPI backend — เสิร์ฟหน้าเว็บ + /api/chat + /api/quota + /api/tts
-├── personality.py    # SYSTEM_PROMPT ที่ jusmin.py กับ server.py ใช้ร่วมกัน (กันสองไฟล์เพี้ยนไปคนละทาง)
-├── tools.py          # tool ที่ agent เรียกใช้ได้ (search_web, open_youtube/control_youtube, get_weather, list_files/read_file/create_folder/write_file/delete_path)
-├── tts.py            # เสียงพูดไทยฝั่ง server (pythaitts engine vachana, ปรับ noise param แล้ว)
+├── personality.py    # SYSTEM_PROMPT ที่ jusmin.py กับ server.py ใช้ร่วมกัน
+├── tools/            # tool registry (package) — server.py ยัง `from tools import ...` / `import tools` ได้เหมือนเดิม
+│   ├── __init__.py   #   re-export ทุกชื่อ public
+│   ├── _state.py     #   pending_action (คำสั่งที่ส่งให้ app.js ทำจริงในเบราว์เซอร์) — weather+youtube share กัน
+│   ├── web.py        #   search_web (ddgs)
+│   ├── weather.py    #   get_weather + set_client_location + view โฟกัส (now/rain/temp/wind/uv/sun/forecast)
+│   ├── youtube.py    #   open_youtube / control_youtube (yt-dlp)
+│   └── files.py      #   list_files/read_file/create_folder/write_file/delete_path + audit log + persist folder
+├── tts.py            # เสียงพูดไทยฝั่ง server (vachanatts engine vachana / gTTS)
 ├── static/
-│   ├── index.html    # โครง HUD (core, panel มุม 4 มุม, log, input bar, quota readout)
-│   ├── style.css      # ธีม dark cyan + animation, boot sequence, particles, scanline/vignette
-│   └── app.js         # แชท + boot + particles + core เอียงลอยเอง + panel มุม 4 มุมที่ผูกกับข้อมูลจริง + TTS/STT
-├── voices/            # แคชโมเดลเสียง ONNX ที่ pythaitts โหลดมา (ไม่ commit)
-├── logs/              # audit log กิจกรรมเข้าถึงไฟล์ แยกไฟล์ต่อรอบ (ไม่ commit)
-├── venv/              # virtualenv (ไม่ commit)
-├── .env               # GEMINI_API_KEY (ไม่ commit)
-├── file_access_config.json  # จำโฟลเดอร์ที่อนุญาตไว้ข้าม restart — absolute path เฉพาะเครื่อง (ไม่ commit)
+│   ├── index.html    # โครง HUD — <link style.css> + <script type="module" src="js/main.js">
+│   ├── style.css      # แค่ list ของ @import css/*.css (ลำดับ = cascade)
+│   ├── css/          # base / boot-fx / controls / sidebar / core / panels / youtube / weather / chat
+│   └── js/           # ES modules:
+│       ├── main.js       #   entry — import ทุกโมดูล + form submit handler + bootstrap ที่ท้าย
+│       ├── state.js      #   `S` = object เดียวสำหรับ flag ที่ใช้ข้ามโมดูล (S.engagedActive, S.ttsSpeaking, S.ytPlayer, ...)
+│       ├── dom.js        #   element refs ทั้งหมด (export const ... = document.getElementById(...))
+│       ├── sound.js      #   beep + TTS (speak, engine/voice select, analyser); export ttsAnalyser/ttsDataArray (live binding)
+│       ├── voice.js      #   STT push-to-talk + wake mode + ช่วงคุยต่อเนื่อง/debounce
+│       ├── wave.js       #   wave-ring rendering + mic analyser (+ prevEngagedActive local, ย่อจอ YT ตอนถูกเรียก)
+│       ├── youtube.js    #   YT.Player + controls + fullscreen/maximize + audio ducking
+│       ├── weather.js    #   การ์ดอากาศทุก view + renderSeriesChart (SVG)
+│       ├── chatui.js     #   addLine/typeText/announceSystemNotice/setThinking/openUrlWithFallback
+│       ├── hud.js        #   boot + particles + idle-tilt + clock + latency graph + quota gauge + link health
+│       ├── settings.js   #   sidebar ⚙ + ปุ่มเลือกโฟลเดอร์
+│       └── geo.js        #   navigator.geolocation -> S.clientGeo (แนบไป /api/chat)
+├── voices/  logs/  venv/  .env  file_access_config.json   # ไม่ commit
 ├── .gitignore
 └── requirements.txt
 ```
+
+**หลักการของ ES module split (สำคัญตอนแก้ต่อ):**
+- flag ที่ **หลายโมดูลอ่าน+เขียน** อยู่ใน `state.js` `S` (import เป็น read-only binding เขียนตรงๆ ไม่ได้ แต่ mutate property ได้) — flag ที่ใช้ในไฟล์เดียว (`selectedEngine`, `recognition`, `followUpActive`, `ytVolume`, `ytPlayerReady`, `geoInFlight`, `prevEngagedActive`, ...) ยังเป็น `let` ในไฟล์นั้น
+- `main.js` เป็นตัวเดียวที่ import กว้าง + ไม่มีใคร import มัน → ตัด circular dependency ส่วนใหญ่ ที่เหลือ (sound↔voice, chatui↔voice) ปลอดภัยเพราะ binding ถูกเรียกใน callback เท่านั้น ไม่เรียกตอน module top-level
+- `dom.js` เพิ่ม `wakeBtn` เป็น explicit ref (เดิม app.js พึ่ง named-element global `window.wakeBtn` โดยบังเอิญ)
 
 ## วิธีรัน
 

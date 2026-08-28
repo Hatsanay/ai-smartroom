@@ -1,0 +1,348 @@
+/* ---------- สภาพอากาศ: มุมขวากลาง (ล้อกับ .yt-panel ฝั่งซ้าย) ---------- */
+/* ซ่อนไว้เป็นค่าเริ่มต้น โผล่มาเฉพาะตอนมีข้อมูลจริงจาก Open-Meteo แล้วเท่านั้น (app.js toggle .visible)
+   เข้าด้วย spring easing (overshoot เบาๆ) แทน fade เฉยๆ ให้ดูมีชีวิตชีวาขึ้น ส่วน .weather-fx เป็น
+   layer พื้นหลังที่มี animation ตาม "หมวดสภาพอากาศจริง" (fx จาก tools.py) — sunny มีแสงเปล่งจากไอคอน,
+   cloudy มีก้อนเมฆลอยผ่าน, fog มีหมอกไหลผ่าน, rain มีเม็ดฝนตกจริง, snow มีเกล็ดหิมะโปรยจริง,
+   storm มีฝนตก + แสงฟ้าแลบเป็นระยะ — สร้าง element ด้วย JS ตาม data.fx เท่านั้น ไม่ใช่ของสุ่มเล่นๆ
+   ที่ไม่เกี่ยวกับข้อมูลจริง */
+
+.weather-panel {
+  position: fixed;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%) scale(0.82);
+  z-index: 5;
+  width: 320px;
+  background: rgba(3, 10, 16, 0.93);
+  border: 1px solid var(--cyan-dim);
+  border-radius: 8px;
+  padding: 22px;
+  box-shadow: 0 0 28px rgba(77, 246, 255, 0.22), inset 0 0 30px rgba(77, 246, 255, 0.04);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.45s ease, transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  text-align: center;
+  overflow-x: hidden;
+  overflow-y: auto;
+  max-height: calc(100vh - 24px);
+  scrollbar-width: thin;
+}
+.weather-panel.visible {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+  pointer-events: auto;
+}
+
+.weather-fx {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: 8px;
+}
+
+.weather-location,
+.weather-main,
+.weather-condition,
+.weather-chips,
+.weather-stats,
+.weather-wind-row,
+.weather-hourly,
+.weather-forecast {
+  position: relative;
+  z-index: 1;
+}
+
+.weather-location {
+  font-size: 12px;
+  color: var(--cyan-dim);
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.weather-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 6px;
+}
+.weather-emoji {
+  font-size: 64px;
+  line-height: 1;
+  animation: weather-emoji-float 3.2s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px rgba(77, 246, 255, 0.35));
+}
+@keyframes weather-emoji-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-7px) rotate(-2deg); }
+}
+.weather-temp {
+  font-size: 52px;
+  font-weight: 600;
+  font-family: 'Orbitron', sans-serif;
+  color: var(--cyan);
+  text-shadow: 0 0 18px rgba(77, 246, 255, 0.8);
+}
+.weather-condition {
+  font-size: 14px;
+  color: var(--cyan);
+  letter-spacing: 0.02em;
+  margin-bottom: 14px;
+}
+.weather-stats {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--cyan-dim);
+  border-top: 1px solid rgba(77, 246, 255, 0.18);
+  padding-top: 10px;
+  margin-bottom: 10px;
+}
+/* --- stat chips: พระอาทิตย์ขึ้น/ตก + UV + โอกาสฝนวันนี้ --- */
+.weather-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.weather-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--cyan);
+  background: rgba(77, 246, 255, 0.08);
+  border: 1px solid rgba(77, 246, 255, 0.22);
+  border-radius: 999px;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+.weather-chip .wc-icon { font-size: 11px; }
+
+/* --- ทิศทางลม: ลูกศรหมุนตามองศาจริง --- */
+.weather-wind-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--cyan-dim);
+  margin-bottom: 12px;
+}
+.wind-arrow {
+  display: inline-block;
+  color: var(--cyan);
+  font-size: 14px;
+  line-height: 1;
+  transition: transform 0.4s ease;
+}
+
+/* --- กราฟรายชั่วโมง 12 ชม. --- */
+.weather-hourly {
+  border-top: 1px solid rgba(77, 246, 255, 0.18);
+  padding-top: 8px;
+  margin-bottom: 12px;
+}
+.hourly-svg { width: 100%; height: auto; display: block; overflow: visible; }
+.hourly-line { fill: none; stroke: var(--cyan); stroke-width: 1.5; }
+.hourly-precip { fill: rgba(77, 246, 255, 0.18); }
+.hourly-dot { fill: var(--cyan); }
+.hourly-temp-label {
+  fill: var(--cyan);
+  font-size: 8px;
+  font-family: 'Share Tech Mono', monospace;
+  text-anchor: middle;
+}
+.hourly-x-label {
+  fill: var(--cyan-dim);
+  font-size: 7px;
+  font-family: 'Share Tech Mono', monospace;
+  text-anchor: middle;
+}
+
+.weather-forecast {
+  display: flex;
+  gap: 2px;
+  border-top: 1px solid rgba(77, 246, 255, 0.18);
+  padding-top: 10px;
+}
+.weather-forecast-day {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 9px;
+  color: var(--cyan-dim);
+}
+.weather-forecast-day .fc-emoji { font-size: 16px; }
+.weather-forecast-day .fc-max { color: var(--cyan); font-weight: 600; }
+.weather-forecast-day .fc-precip { color: var(--cyan); opacity: 0.7; font-size: 8px; }
+
+/* --- โฟกัสตามคำถาม: การ์ดปรับ layout ตาม data-view (now/rain/temperature/wind/uv/sun/forecast) --- */
+.weather-focus { display: none; margin-bottom: 12px; }
+.weather-panel:not([data-view="now"]) .weather-focus { display: block; }
+.weather-panel:not([data-view="now"]) .weather-chips,
+.weather-panel:not([data-view="now"]) .weather-stats,
+.weather-panel:not([data-view="now"]) .weather-wind-row,
+.weather-panel:not([data-view="now"]) .weather-hourly { display: none; }
+.weather-panel:not([data-view="now"]):not([data-view="forecast"]) .weather-forecast { display: none; }
+
+.wf-head {
+  font-size: 12px;
+  color: var(--cyan);
+  letter-spacing: 0.02em;
+  margin-bottom: 8px;
+  text-shadow: 0 0 10px rgba(77, 246, 255, 0.5);
+}
+.wf-chart {
+  border-top: 1px solid rgba(77, 246, 255, 0.18);
+  padding-top: 8px;
+}
+.wf-subhead {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--cyan-dim);
+  margin-top: 6px;
+}
+.wf-windows {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 8px;
+}
+.wf-win {
+  font-size: 10px;
+  color: var(--cyan);
+  background: rgba(77, 246, 255, 0.1);
+  border: 1px solid rgba(77, 246, 255, 0.25);
+  border-radius: 6px;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+.wf-sun { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.wf-sun-times {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 20px;
+  color: var(--cyan);
+  text-shadow: 0 0 14px rgba(77, 246, 255, 0.6);
+}
+.wf-sun-len { font-size: 11px; color: var(--cyan-dim); margin-bottom: 4px; }
+.wf-sun-row {
+  font-size: 10px;
+  color: var(--cyan-dim);
+  border-top: 1px solid rgba(77, 246, 255, 0.12);
+  padding-top: 4px;
+  width: 100%;
+  text-align: center;
+}
+
+/* view "forecast": แถว 7 วันใหญ่ขึ้นหน่อยเพราะเป็นพระเอกของ view นี้ */
+.weather-panel[data-view="forecast"] .weather-forecast-day { font-size: 10px; gap: 3px; }
+.weather-panel[data-view="forecast"] .weather-forecast-day .fc-emoji { font-size: 20px; }
+
+/* --- sunny: แสงเปล่งพัลส์จากด้านหลังไอคอน --- */
+.weather-fx.fx-sunny::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  width: 160px;
+  height: 160px;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, rgba(255, 209, 102, 0.4) 0%, rgba(255, 209, 102, 0) 70%);
+  animation: fx-sun-pulse 3s ease-in-out infinite;
+}
+@keyframes fx-sun-pulse {
+  0%, 100% { opacity: 0.55; transform: translateX(-50%) scale(1); }
+  50% { opacity: 1; transform: translateX(-50%) scale(1.2); }
+}
+
+/* --- cloudy: ก้อนเมฆเบลอลอยผ่าน --- */
+.fx-cloud-shape {
+  position: absolute;
+  width: 100px;
+  height: 36px;
+  background: rgba(170, 200, 210, 0.16);
+  border-radius: 50%;
+  filter: blur(7px);
+  animation-name: fx-cloud-drift;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@keyframes fx-cloud-drift {
+  from { transform: translateX(-140px); }
+  to { transform: translateX(380px); }
+}
+
+/* --- fog: แถบหมอกไหลซ้ายขวาเบาๆ --- */
+.fx-fog-band {
+  position: absolute;
+  left: -60%;
+  width: 220%;
+  height: 24px;
+  background: linear-gradient(90deg, transparent, rgba(200, 212, 217, 0.18), transparent);
+  animation-name: fx-fog-drift;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+@keyframes fx-fog-drift {
+  0%, 100% { transform: translateX(-8%); }
+  50% { transform: translateX(8%); }
+}
+
+/* --- rain/storm: เม็ดฝนตกจริง --- */
+.fx-raindrop {
+  position: absolute;
+  top: -24px;
+  width: 2px;
+  height: 20px;
+  background: linear-gradient(to bottom, rgba(130, 205, 255, 0), rgba(130, 205, 255, 0.7));
+  animation-name: fx-rain-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@keyframes fx-rain-fall {
+  to { transform: translateY(340px); }
+}
+
+/* --- storm: แสงฟ้าแลบเป็นจังหวะ --- */
+.fx-flash {
+  position: absolute;
+  inset: 0;
+  background: rgba(230, 245, 255, 0.55);
+  opacity: 0;
+  animation: fx-storm-flash 4.5s ease-out infinite;
+}
+@keyframes fx-storm-flash {
+  0%, 91%, 100% { opacity: 0; }
+  92% { opacity: 0.75; }
+  93% { opacity: 0.05; }
+  94% { opacity: 0.5; }
+  95% { opacity: 0; }
+}
+
+/* --- snow: เกล็ดหิมะโปรยตกพร้อมแกว่งซ้ายขวาเบาๆ --- */
+.fx-snowflake {
+  position: absolute;
+  top: -20px;
+  color: rgba(235, 245, 255, 0.85);
+  font-size: 12px;
+  animation-name: fx-snow-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@keyframes fx-snow-fall {
+  to { transform: translateY(340px) translateX(var(--fx-drift, 0px)); }
+}

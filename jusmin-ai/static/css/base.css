@@ -1,0 +1,44 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Share+Tech+Mono&display=swap');
+
+:root {
+  --cyan: #4df6ff;
+  --cyan-dim: #1c8f99;
+  --bg: #030a10;
+  --glow: 0 0 12px rgba(77, 246, 255, 0.65);
+
+  /* สีของ core/wave/glow เปลี่ยนตามสถานะ (ค่าเริ่มต้น = cyan เหมือนเดิม) */
+  --active-color: var(--cyan);
+  --active-glow-rgb: 77, 246, 255;
+}
+
+/* ไมค์เปิดฟังอยู่จริง (isMicOpen() true) -> เปลี่ยนเป็นเขียว */
+.core-wrap.mic-listening {
+  --active-color: #4dff9e;
+  --active-glow-rgb: 77, 255, 158;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--cyan);
+  font-family: 'Share Tech Mono', monospace;
+  overflow: hidden;
+}
+
+#particles {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.hud {
+  position: relative;
+  z-index: 1;
+  width: 100vw;
+  height: 100vh;
+  background: radial-gradient(ellipse at center, #071b24 0%, #030a10 60%, #010304 100%);
+}

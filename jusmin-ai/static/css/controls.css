@@ -1,0 +1,55 @@
+.mute-btn {
+  position: absolute;
+  bottom: 172px;
+  right: 24px;
+  z-index: 7;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  background: rgba(77, 246, 255, 0.08);
+  border: 1px solid var(--cyan-dim);
+  color: var(--cyan);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.mute-btn:hover { background: rgba(77, 246, 255, 0.2); box-shadow: 0 0 10px rgba(77, 246, 255, 0.45); }
+
+/* ปุ่ม/เมนูตั้งค่า — ตอนนี้อยู่ในเมนูย่อย "ตั้งค่า" ของ sidebar (ไม่ลอยมุมจอแล้ว) เลยเป็น block
+   เต็มความกว้างของ .setting-item แทน absolute positioning */
+.engine-select,
+.voice-select {
+  width: 100%;
+  background: rgba(3, 10, 16, 0.9);
+  border: 1px solid var(--cyan-dim);
+  color: var(--cyan);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  padding: 6px 7px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.engine-select:hover, .engine-select:focus,
+.voice-select:hover, .voice-select:focus { border-color: var(--cyan); outline: none; }
+
+.folder-btn {
+  width: 100%;
+  background: rgba(3, 10, 16, 0.9);
+  border: 1px solid var(--cyan-dim);
+  color: var(--cyan);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.folder-btn:hover { background: rgba(77, 246, 255, 0.15); box-shadow: 0 0 10px rgba(77, 246, 255, 0.3); }
+.folder-btn.configured { border-color: var(--cyan); color: var(--cyan); }
+.folder-btn:disabled { opacity: 0.5; cursor: wait; }

@@ -1,0 +1,125 @@
+/* ---------- corner panels ---------- */
+
+.panel {
+  position: absolute;
+  z-index: 2;
+  width: 190px;
+  height: 90px;
+  border: 1px solid rgba(77, 246, 255, 0.3);
+  padding: 8px;
+  opacity: 0.85;
+}
+
+.panel-tl { top: 24px; left: 24px; border-right: none; border-bottom: none; }
+.panel-tr { top: 24px; right: 24px; border-left: none; border-bottom: none; }
+.panel-bl {
+  bottom: 24px; left: 24px; border-right: none; border-top: none;
+  width: 130px; height: 130px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+}
+.panel-br {
+  bottom: 24px; right: 24px; border-left: none; border-top: none;
+  width: 130px; height: 130px;
+}
+
+.panel-label {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: var(--cyan-dim);
+  margin-bottom: 4px;
+}
+
+.panel-empty {
+  font-size: 10px;
+  color: var(--cyan-dim);
+  opacity: 0.6;
+  text-align: center;
+  margin-top: 8px;
+}
+
+/* กราฟเวลาตอบสนอง: ค่าจริงจากการวัด performance.now() รอบ fetch /api/chat แต่ละครั้ง */
+.graph-line {
+  width: 100%;
+  height: 36px;
+  fill: none;
+  stroke: var(--cyan);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 3px rgba(77, 246, 255, 0.8));
+}
+.graph-line polyline { transition: points 0.3s ease; }
+
+/* quota gauge: จำนวนแท่งที่ติดสว่าง = สัดส่วนโควตาที่ใช้ไปจริงจาก /api/quota */
+.bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 44px;
+}
+.bars span {
+  flex: 1;
+  height: 100%;
+  background: rgba(77, 246, 255, 0.08);
+  border: 1px solid rgba(77, 246, 255, 0.2);
+  transition: background 0.4s ease, box-shadow 0.4s ease;
+}
+.bars span.lit {
+  background: linear-gradient(to top, var(--cyan-dim), var(--cyan));
+  box-shadow: 0 0 6px rgba(77, 246, 255, 0.6);
+  border-color: transparent;
+}
+.bars span.lit.warn {
+  background: linear-gradient(to top, #a35400, #ff8a4d);
+  box-shadow: 0 0 6px rgba(255, 138, 77, 0.6);
+}
+
+/* radar = heartbeat การเชื่อมต่อกับ server จริง ไม่ใช่ของตกแต่ง */
+.radar {
+  position: relative;
+  width: 74px;
+  height: 74px;
+  border-radius: 50%;
+  border: 1px solid rgba(77, 246, 255, 0.4);
+  overflow: hidden;
+}
+.radar::before, .radar::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(77, 246, 255, 0.25);
+}
+.radar::before { inset: 12px; }
+.radar::after { inset: 24px; }
+.radar-sweep {
+  position: absolute;
+  inset: 0;
+  background: conic-gradient(rgba(77, 246, 255, 0.75), transparent 35%);
+  animation: spin 3s linear infinite;
+  transition: background 0.4s ease;
+}
+.radar-sweep.lost {
+  background: conic-gradient(rgba(255, 90, 90, 0.85), transparent 35%);
+  animation-play-state: paused;
+}
+.link-status.lost { color: #ff5a5a; text-shadow: 0 0 6px rgba(255, 90, 90, 0.6); }
+
+/* นาฬิกาจริง แทนลูกโลกตกแต่ง */
+.clock-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.clock-time {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-shadow: var(--glow);
+}
+.clock-date {
+  font-size: 10px;
+  color: var(--cyan-dim);
+  letter-spacing: 0.08em;
+  margin-top: 4px;
+}

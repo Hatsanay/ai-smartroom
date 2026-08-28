@@ -1,0 +1,125 @@
+/* ---------- log + input ---------- */
+
+.log {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: 130px;
+  transform: translateX(-50%);
+  width: min(560px, 80vw);
+  max-height: 26vh;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.6;
+  padding-right: 4px;
+  /* ซ่อนแชทไว้เป็นค่าเริ่มต้น โชว์เฉพาะตอนกำลังเรียก/คุยกับ จัสมิน จริง (.chat-active คุมจาก engagedActive
+     ใน app.js) หรือตอนเอาเมาส์ไปชี้ดู (:hover) — ไม่ใช้ pointer-events:none เพราะจะทำให้ :hover ตรวจจับไม่ได้ */
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+.log:hover,
+.log.chat-active {
+  opacity: 1;
+}
+.log::-webkit-scrollbar { width: 4px; }
+.log::-webkit-scrollbar-thumb { background: var(--cyan-dim); }
+
+.log .you { color: #9df; opacity: 0.75; }
+.log .you::before { content: '> '; }
+.log .jusmin { color: var(--cyan); text-shadow: 0 0 4px rgba(77,246,255,0.5); margin-bottom: 10px; display: block; }
+.log .jusmin::before { content: 'JUSMIN  '; color: var(--cyan-dim); }
+
+.log .jusmin-link { margin-bottom: 10px; }
+.log .jusmin-link a { color: var(--cyan); text-decoration: underline; cursor: pointer; }
+.log .jusmin-link a:hover { color: #fff; }
+
+.typing-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 12px;
+  margin-left: 2px;
+  background: var(--cyan);
+  vertical-align: middle;
+  animation: blink 0.9s steps(1) infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+.input-bar {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: 40px;
+  transform: translateX(-50%);
+  width: min(560px, 80vw);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--cyan-dim);
+  border-radius: 3px;
+  padding: 10px 14px;
+  background: rgba(77, 246, 255, 0.05);
+  backdrop-filter: blur(4px);
+  box-shadow: inset 0 0 12px rgba(77, 246, 255, 0.1);
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+.input-bar:focus-within {
+  border-color: var(--cyan);
+  box-shadow: inset 0 0 12px rgba(77, 246, 255, 0.2), 0 0 14px rgba(77, 246, 255, 0.35);
+}
+
+.input-bar .prompt { color: var(--cyan); }
+
+.input-bar input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--cyan);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+}
+
+.input-bar input::placeholder { color: var(--cyan-dim); }
+
+.mic-btn {
+  background: transparent;
+  border: none;
+  color: var(--cyan-dim);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px;
+  transition: color 0.2s, transform 0.15s;
+}
+.mic-btn:hover { color: var(--cyan); }
+.mic-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.mic-btn.listening {
+  color: #ff5a5a;
+  animation: mic-pulse 1s ease-in-out infinite;
+}
+@keyframes mic-pulse {
+  0%, 100% { transform: scale(1); text-shadow: 0 0 4px rgba(255, 90, 90, 0.6); }
+  50% { transform: scale(1.3); text-shadow: 0 0 14px rgba(255, 90, 90, 0.9); }
+}
+
+.wake-btn {
+  background: transparent;
+  border: none;
+  color: var(--cyan-dim);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px;
+  transition: color 0.2s;
+}
+.wake-btn:hover { color: var(--cyan); }
+.wake-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.wake-btn.active {
+  color: var(--cyan);
+  animation: wake-glow 2.4s ease-in-out infinite;
+}
+@keyframes wake-glow {
+  0%, 100% { text-shadow: 0 0 4px rgba(77, 246, 255, 0.5); opacity: 0.75; }
+  50% { text-shadow: 0 0 12px rgba(77, 246, 255, 0.9); opacity: 1; }
+}
