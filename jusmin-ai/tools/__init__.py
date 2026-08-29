@@ -20,15 +20,22 @@ from .files import (
 )
 from .briefing import daily_briefing
 from .mail import check_email, read_email, save_attachment, search_email, send_email
+from .media import download_media, search_media, view_media
 from .memory import forget, recall, remember
 from .reminders import add_reminder, cancel_reminder, list_reminders
 from .tasks import add_task, complete_task, list_tasks
+from .vision import analyze_image
 from .weather import get_weather, set_client_location
-from .web import search_web
+from .web import read_url, search_web
 from .youtube import control_youtube, open_youtube
 
 __all__ = [
     "search_web",
+    "read_url",
+    "analyze_image",
+    "search_media",
+    "download_media",
+    "view_media",
     "get_weather",
     "set_client_location",
     "open_youtube",

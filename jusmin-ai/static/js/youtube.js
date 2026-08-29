@@ -1,5 +1,5 @@
 import { S } from './state.js';
-import { ytPanel, ytPanelTitle, ytPlayerMount, ytExitFs } from './dom.js';
+import { ytPanel, ytPanelTitle, ytPlayerMount, ytExitFs, mediaViewer } from './dom.js';
 
 /* ---------- เครื่องเล่น YouTube: ฝัง IFrame Player จริงในหน้า (ไม่ใช่เปิดแท็บแยก) เพื่อให้
    สั่งหยุด/เล่นต่อ/เปลี่ยนเพลงจากโค้ดเราได้จริง — แท็บที่เปิดแยกจาก window.open() สั่งควบคุมจาก
@@ -180,11 +180,22 @@ export function exitYoutubeFullscreen() {
   }
 }
 
+// ย่อจอ YouTube ชั่วคราวตอนถูกเรียก จัสมิน ระหว่างเต็มจอ (wave.js จับ rising edge ของ S.engagedActive
+// แล้วเรียกอันนี้) — ทำเป็นฟังก์ชันเดียว atomic กันลำดับ exit/ตั้ง flag สลับกันเองจนเด้งกลับไม่ทำงาน
+export function minimizeYoutubeForEngage() {
+  if (!S.ytMaximized) return;
+  exitYoutubeFullscreen();              // เคลียร์ S.ytWasMaximizedBeforeEngage เป็น false ด้วย
+  S.ytWasMaximizedBeforeEngage = true;  // ...แล้วตั้งใหม่ = "กลับไปเต็มจอเมื่อคุยจบ" (expireFollowUpWindow)
+}
+
 if (ytExitFs) ytExitFs.addEventListener('click', exitYoutubeFullscreen);
 
 // กด Esc = ออกจากเต็มจอ / ยกเลิกการกลับไปเต็มจออัตโนมัติ (นอกจากสั่งด้วยเสียง "ออกจากเต็มจอ") เผื่อ STT ฟังไม่ติด
+// ถ้าตัวดูรูป/วิดีโอ (media viewer) เปิดอยู่ ให้มันจัดการ Esc ก่อน (ปิดทีละชั้น ไม่ปิดพร้อมกันหมด)
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && (S.ytMaximized || S.ytWasMaximizedBeforeEngage)) exitYoutubeFullscreen();
+  if (e.key !== 'Escape') return;
+  if (mediaViewer && !mediaViewer.hidden) return;
+  if (S.ytMaximized || S.ytWasMaximizedBeforeEngage) exitYoutubeFullscreen();
 });
 // ผู้ใช้กด Esc ออกจาก real fullscreen (ที่ขอซ้อนไว้) -> เลิก .maximized ด้วย ไม่ให้ค้างเต็มจอครึ่งๆ
 document.addEventListener('fullscreenchange', () => {

@@ -1,7 +1,7 @@
 import { S } from './state.js';
 import { coreWrap, log, waveRing } from './dom.js';
 import { ttsAnalyser, ttsDataArray } from './sound.js';
-import { exitYoutubeFullscreen } from './youtube.js';
+import { minimizeYoutubeForEngage } from './youtube.js';
 
 /* ---------- คลื่นเสียงรอบวง: ข้อมูลจริงเท่าที่ browser API ให้ได้ ----------
    ตอนฟัง: amplitude จริงจากไมค์ผ่าน Web Audio AnalyserNode
@@ -58,10 +58,7 @@ export function renderWaveRing() {
 
   // YouTube เต็มจออยู่แล้วผู้ใช้เพิ่งเรียก จัสมิน (S.engagedActive ขึ้นขอบ) -> ย่อจอชั่วคราวให้เห็น HUD หลัก
   // เต็มรูปแบบ (เวฟ/สี/แชท เหมือนหน้าหลักเป๊ะ) — พอคุยจบ + เงียบครบ 15 วิ (expireFollowUpWindow) กลับไปเต็มจอเอง
-  if (S.engagedActive && !prevEngagedActive && S.ytMaximized) {
-    exitYoutubeFullscreen();          // เคลียร์ S.ytWasMaximizedBeforeEngage ด้วย
-    S.ytWasMaximizedBeforeEngage = true; // ...แล้วตั้งใหม่ทีหลัง = "กลับไปเต็มจอเมื่อคุยจบ"
-  }
+  if (S.engagedActive && !prevEngagedActive) minimizeYoutubeForEngage();
   prevEngagedActive = S.engagedActive;
 
   const micOpen = isMicOpen();

@@ -104,6 +104,26 @@ def get_allowed_folder() -> str | None:
     return _allowed_folder
 
 
+def _safe_name(name: str) -> str:
+    """ชื่อไฟล์จากภายนอก (ไฟล์แนบเมล / URL) — เอาแค่ basename ตัด path/.. /อักขระต้องห้ามของ Windows ออก
+    ใช้ร่วมกันโดย mail.py (save_attachment) และ media.py (download_media)"""
+    base = os.path.basename((name or "").replace("\\", "/")).strip().lstrip(".")
+    base = "".join(c for c in base if c >= " " and c not in '<>:"|?*')
+    base = " ".join(base.split())  # ยุบช่องว่างซ้ำ
+    return base or "file"
+
+
+def _uniq(target: str) -> str:
+    """ถ้าไฟล์ชื่อนี้มีอยู่แล้ว เติม ' (2)', ' (3)' ... กันเขียนทับของเดิม"""
+    if not os.path.exists(target):
+        return target
+    root, ext = os.path.splitext(target)
+    i = 2
+    while os.path.exists(f"{root} ({i}){ext}"):
+        i += 1
+    return f"{root} ({i}){ext}"
+
+
 def _resolve_safe_path(subpath: str) -> tuple[bool, str]:
     """resolve subpath เทียบกับ _allowed_folder แล้วเช็คว่ายังอยู่ในขอบเขตจริง คืน (ปลอดภัยไหม, path เต็ม)"""
     if not _allowed_folder:

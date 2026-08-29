@@ -125,6 +125,29 @@
       <div class="weather-forecast" id="weatherForecast"></div>
     </div>
 
+    <!-- ผลค้นรูป/วิดีโอ: โผล่เฉพาะตอน search_media มีผลจริง (thumbnail จากผลค้นจริง) -->
+    <div class="media-grid-panel" id="mediaGridPanel">
+      <div class="media-grid-head">
+        <span id="mediaGridTitle">ผลการค้นหา</span>
+        <button type="button" class="media-grid-close" id="mediaGridClose" title="ปิด">✕</button>
+      </div>
+      <div class="media-grid" id="mediaGrid"></div>
+    </div>
+
+    <!-- ดูรูป/วิดีโอเต็มจอ -->
+    <div class="media-viewer" id="mediaViewer" hidden>
+      <button type="button" class="mv-nav mv-prev" id="mediaPrev" title="ก่อนหน้า (←)">‹</button>
+      <button type="button" class="mv-nav mv-next" id="mediaNext" title="ถัดไป (→)">›</button>
+      <button type="button" class="mv-close" id="mediaClose" title="ปิด (Esc)">✕</button>
+      <div class="mv-stage" id="mediaStage"></div>
+      <div class="mv-bar">
+        <span class="mv-title" id="mediaTitle"></span>
+        <span class="mv-pos" id="mediaPos"></span>
+        <span class="mv-source" id="mediaSource"></span>
+        <button type="button" class="mv-dl" id="mediaDownload" hidden>⬇ ดาวน์โหลด</button>
+      </div>
+    </div>
+
     <!-- แกนกลาง: core -->
     <div class="core-parallax" id="coreParallax">
       <div class="core-wrap" id="coreWrap">

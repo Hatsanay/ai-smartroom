@@ -7,6 +7,7 @@ import { sendBeep, receiveBeep, speak } from './sound.js';
 import { recordLatency, refreshQuota, renderQuotaDisplay, runBoot, QUOTA_SYNC_MS } from './hud.js';
 import { playYoutubeVideo, controlYoutube } from './youtube.js';
 import { showWeather, scheduleWeatherHide } from './weather.js';
+import { showMediaResults, showMedia, hideMedia } from './media.js';
 import { startWakeMode, startFollowUpWindow } from './voice.js';
 import { renderWaveRing } from './wave.js';
 import { refreshClientGeo, GEO_MAX_AGE_MS, GEO_RETRY_MS } from './geo.js';
@@ -50,6 +51,12 @@ form.addEventListener('submit', async (e) => {
       controlYoutube(data.action.action);
     } else if (data.action?.type === 'show_weather' && data.action.data) {
       showWeather(data.action.data);
+    } else if (data.action?.type === 'show_media_results' && data.action.items) {
+      showMediaResults(data.action);
+    } else if (data.action?.type === 'show_media' && data.action.list) {
+      showMedia(data.action);
+    } else if (data.action?.type === 'hide_media') {
+      hideMedia();
     }
     const wasWeatherShown = data.action?.type === 'show_weather' && !!data.action.data;
     // นับ 15 วิ "หลังเสียงพูดหยุดจริง" (ผ่าน callback ตอน speak() จบ) ไม่ใช่นับตั้งแต่ได้คำตอบมา

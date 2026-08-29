@@ -8,7 +8,8 @@ from typing import Optional
 
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, HTTPException, Response
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from google import genai
 from google.genai import errors as genai_errors
@@ -20,6 +21,7 @@ from personality import SYSTEM_PROMPT, strip_markdown
 from tools import (
     add_reminder,
     add_task,
+    analyze_image,
     cancel_reminder,
     check_email,
     complete_task,
@@ -34,14 +36,18 @@ from tools import (
     list_tasks,
     open_youtube,
     pop_pending_action,
+    download_media,
     read_email,
     read_file,
+    read_url,
     recall,
     remember,
     save_attachment,
     search_email,
+    search_media,
     search_web,
     send_email,
+    view_media,
     write_file,
 )
 from tts import synthesize as tts_synthesize
@@ -60,6 +66,11 @@ chat = client.chats.create(
         system_instruction=SYSTEM_PROMPT,
         tools=[
             search_web,
+            read_url,
+            analyze_image,
+            search_media,
+            download_media,
+            view_media,
             open_youtube,
             control_youtube,
             get_weather,
@@ -245,6 +256,25 @@ def notifications_endpoint(response: Response) -> dict:
     # reminder ที่ scheduler thread เจอว่าถึงเวลาแล้ว — static/js/notify.js poll เอาไปแจ้ง + ให้ จัสมิน พูด
     response.headers["Cache-Control"] = "no-store"
     return {"items": tools.notify.drain()}
+
+
+_MEDIA_EXTS = {
+    ".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".avif",
+    ".mp4", ".webm", ".mkv", ".mov", ".m4v",
+}
+
+
+@app.get("/api/media")
+def media_endpoint(path: str) -> FileResponse:
+    # เสิร์ฟไฟล์รูป/วิดีโอที่ view_media/download_media อ้าง — เช็ค containment ฝั่ง server เองทุกครั้ง
+    # (ห้ามเชื่อ query param) จำกัดแค่ไฟล์ในโฟลเดอร์ที่ผู้ใช้อนุญาต + นามสกุลสื่อเท่านั้น
+    # FileResponse รองรับ Range header เอง -> <video> seek ได้
+    ok, target = tools.files._resolve_safe_path(path)
+    if not ok or not os.path.isfile(target):
+        raise HTTPException(status_code=404, detail="not found")
+    if os.path.splitext(target)[1].lower() not in _MEDIA_EXTS:
+        raise HTTPException(status_code=415, detail="unsupported media type")
+    return FileResponse(target)
 
 
 class FolderStatus(BaseModel):

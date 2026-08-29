@@ -7,4 +7,7 @@ vachanatts
 numpy
 gTTS
 yt-dlp
+imageio-ffmpeg   # bundled ffmpeg binary — download_media ใช้ต่อ video+audio ของ YouTube
 requests
+trafilatura
+Pillow  # ไม่บังคับ — analyze_image ใช้ย่อรูปใหญ่ก่อนส่ง Gemini (ไม่มีก็ส่งดิบได้)

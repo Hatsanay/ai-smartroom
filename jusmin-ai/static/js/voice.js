@@ -79,7 +79,7 @@ const WAKE_WORD_PATTERNS = [
   /[cg][ha][ts]?\s?m[iy]ne?/i, // chasmin gasmin chatmin (จ ~ ch/j)
   /jes\s?m[iy]ne?/i,           // jesmin
   /jus\s?m[ae]n/i,             // jusman
-  /just[iy]n/i,                // justin (STT มักได้ยินเป็นชื่อนี้)
+  /\bjust[iy]n\b/i,            // justin (STT มักได้ยินเป็นชื่อนี้) — ต้องเป็นคำเดี่ยว กัน "adjusting" ฯลฯ
   // ---- ไทย: แกน "จัส/จัด/จาด/ยัส/ญัส..." + "มิน/มีน/มิล/มน" (+ หาง "ทร์/์" ที่ STT ชอบเติม) ----
   new RegExp('[จยญชฌ]' + T + '[ัาะ]?' + T + '[รฤ]?[สซดชฉศษทถ]' + T + '\\s?ม' + T + '[ิีึ]?' + T + '[นลณมฬ](?:ทร?์?|์)?'),
   // ---- ไทย: ขึ้นต้น "แจส / แจ๊ส / แยส / แจ็ส" ----
@@ -90,9 +90,10 @@ const WAKE_WORD_PATTERNS = [
   /จ[ัา]?[รด]?[สซด]\s?ม[ิี]?น(?:ทร?์?)?/,
   // ---- ไทย: "จัสติน / แจสติน" (STT ได้ยินเป็นชื่อจัสติน) ----
   /แ?จ[ัา]?[สซด]\s?ต[ิี]?น/,
-  // ---- ไทย: สั้นๆ แค่ "จัส / จั๊ส / แจ๊ส / จัสมิ" เผื่อ STT ตัดหางคำ (ไม่เอา "จัด" เดี่ยวๆ = คำไทยปกติ)
+  // ---- ไทย: สั้นๆ แค่ "จัส / จั๊ส / จัสมิ" เผื่อ STT ตัดหางคำ (ไม่เอา "จัด" เดี่ยวๆ = คำไทยปกติ,
+  //          ไม่เอา "แจ๊ส" เดี่ยวๆ = jazz; "แจสมิน" เต็มคำมี pattern อื่นจับอยู่แล้ว)
   //          ใช้ lookbehind กันไม่ให้กิน space นำหน้า (จะได้ไม่ตัดคำสั่งเพี้ยนตอนมีคำนำหน้าคำปลุก) ----
-  /(?<=^|\s)(?:จั[่้๊๋]?ส|แจ[่้๊๋]?ส|จัสมิ|จั[่้๊๋]?ด[สซ])(?=\s|$|ม)/,
+  /(?<=^|\s)(?:จั[่้๊๋]?ส|จัสมิ|จั[่้๊๋]?ด[สซ])(?=\s|$|ม)/,
 ];
 
 // เรียกชื่อเฉยๆ ไม่มีคำสั่งตาม - ตอบรับสั้นๆ ด้วยเสียงจริง สุ่มสลับไว้กันซ้ำจำเจ
@@ -111,6 +112,59 @@ function extractWakeCommand(transcript) {
 
 let wakeRecognition = null;
 let wakeRestartTimer = null;
+let wakeStarting = false;     // มี start() ค้างอยู่ยังไม่ยิง onstart -> กันสร้าง instance ซ้อน
+let wakeStartedAt = 0;        // เวลาที่เรียก start() ครั้งล่าสุด (watchdog ใช้)
+let wakeOnstartAt = 0;        // เวลาที่ onstart ยิงล่าสุด
+// per-utterance state — รีเซ็ตทุกครั้งที่ขึ้นประโยคใหม่ / restart session
+let curUtterIdx = -1;
+let utterWakeSeen = false;    // เจอคำปลุกใน interim ของประโยคนี้แล้ว
+let utterHandled = false;     // ประมวลผลประโยคนี้ไปแล้ว (กันยิงซ้ำ interim/final/onend)
+let lastInterim = '';         // interim ล่าสุด — เผื่อ session ตายก่อนได้ final ("จัสมิน" คำเดียว)
+let heardRevertTimer = null;
+
+// ตัด instance เดิมให้ขาด (abort + ถอด handler) ก่อนสร้างใหม่ — กัน instance เก่ายังฟัง + onend เก่าสั่ง restart ทับ
+function killWakeRecognition() {
+  const w = wakeRecognition;
+  wakeRecognition = null;
+  if (!w) return;
+  w.onresult = w.onerror = w.onend = w.onstart = null;
+  try { w.abort(); } catch (err) { /* state ยังไม่พร้อม ปล่อยได้ */ }
+}
+
+// แสดงว่า "ไมค์ยังทำงาน ได้ยินแล้วแต่ไม่ตรงคำปลุก" — ผู้ใช้จะได้รู้ว่าเป็นปัญหาการ match ไม่ใช่ไมค์ตาย
+function flashHeard(t) {
+  clearTimeout(heardRevertTimer);
+  const short = t.length > 22 ? t.slice(0, 22) + '…' : t;
+  status.textContent = `STANDBY · ได้ยิน "${short}"`;
+  heardRevertTimer = setTimeout(() => {
+    if (status.textContent.startsWith('STANDBY · ได้ยิน')) {
+      status.textContent = followUpActive ? FOLLOWUP_STATUS_TEXT : 'STANDBY';
+    }
+  }, 1800);
+}
+
+// ประมวลผลประโยคที่ "จบแล้ว" (final จริง หรือ fallback จาก interim ตอน session ตาย)
+function handleWakeFinal(transcript, wakeCmd) {
+  if (utterHandled) return;
+  if (wakeCmd === undefined || wakeCmd === null) wakeCmd = extractWakeCommand(transcript);
+  if (wakeCmd === null) {
+    // ได้ยินเสียงแต่ไม่มีคำปลุก — ถ้าเมื่อกี้ interim หลอกว่าเจอ (utterWakeSeen) ให้ปลดสีเขียวคืน
+    if (utterWakeSeen && !followUpActive && !isAccumulatingCommand) S.engagedActive = false;
+    flashHeard(transcript);
+    console.log('[wake] missed:', transcript);
+    return;
+  }
+  utterHandled = true;
+  if (!wakeCmd) {
+    // เรียกชื่อเฉยๆ ไม่มีคำสั่ง -> ตอบรับด้วยเสียง แล้วเข้าช่วงคุยต่อเนื่อง
+    S.engagedActive = true;
+    const ack = WAKE_ACK_PHRASES[Math.floor(Math.random() * WAKE_ACK_PHRASES.length)];
+    addLine('jusmin', ack);
+    speak(ack, () => { if (S.wakeMode) startFollowUpWindow(); });
+    return;
+  }
+  queueWakeCommand(wakeCmd);
+}
 
 // ช่วงหน่วงก่อน restart session ฟังตลอดใหม่ทุกครั้งที่ session เดิมจบ (ปกติ ไม่ใช่แค่ตอน error —
 // ดูหมายเหตุที่ onend ข้างล่าง) เก็บเป็นค่าน้อยที่สุดเท่าที่พอกันชนได้ กันไมค์ "หูหนวก" นานเกินจำเป็น
@@ -191,18 +245,12 @@ function flushWakeCommand() {
 // (ไม่ต้องรอ TTS จบ แทรกได้ทันที) แต่ไม่น่าเชื่อถือพอในสถานการณ์จริง เพราะ STT แปลงเสียงสะท้อนออกมาเพี้ยนบ่อย
 // แผนในอนาคต: ใช้ getUserMedia({echoCancellation:true}) + STT backend จริง (เช่น Whisper) แทน
 // ถึงจะแทรกกลางประโยคได้แบบเชื่อถือได้ ตอนนี้พอไม่ไหวก่อน
-const TTS_RESUME_DELAY_MS = 500; // กันเสียงสะท้อน/หางเสียงจากลำโพงหลุดเข้าไมค์หลัง TTS จบ
+const TTS_RESUME_DELAY_MS = 200; // กันเสียงสะท้อน/หางเสียงจากลำโพงหลุดเข้าไมค์หลัง TTS จบ (ลดจาก 500 ให้ไมค์กลับมาไวขึ้น)
 
 export function pauseWakeListening() {
   clearTimeout(wakeRestartTimer);
-  if (wakeRecognition) {
-    wakeRecognition.onend = null; // กัน onend เดิมสั่ง restart ซ้อนกับ resumeWakeListeningAfterDelay
-    try {
-      wakeRecognition.stop();
-    } catch (err) {
-      // เผื่อ stop() ซ้อนกับ state ที่ยังไม่พร้อม ปล่อยผ่านได้ ไม่กระทบอะไร
-    }
-  }
+  wakeStarting = false;
+  killWakeRecognition(); // abort + ถอด handler -> ไม่มี onend สั่ง restart ซ้อนกับ resumeWakeListeningAfterDelay
 }
 
 export function resumeWakeListeningAfterDelay(delayMs = TTS_RESUME_DELAY_MS) {
@@ -213,84 +261,119 @@ export function resumeWakeListeningAfterDelay(delayMs = TTS_RESUME_DELAY_MS) {
 
 function runWakeRecognition() {
   if (!S.wakeMode || !SpeechRecognitionCtor) return;
+  if (wakeStarting) return; // มี start() ค้างอยู่ ยังไม่ยิง onstart — อย่าสร้างซ้อน
 
-  wakeRecognition = new SpeechRecognitionCtor();
-  wakeRecognition.lang = 'th-TH';
-  wakeRecognition.interimResults = false;
-  wakeRecognition.continuous = true;
+  clearTimeout(wakeRestartTimer);
+  wakeRestartTimer = null;
+  killWakeRecognition();
 
-  wakeRecognition.onresult = (e) => {
-    if (S.ttsSpeaking) return; // เผื่อผลลัพธ์หลุดมาในช่วงเสี้ยววินาทีก่อน stop() มีผลจริง กันไว้อีกชั้น
-    const result = e.results[e.results.length - 1];
-    if (!result.isFinal) return;
-    const transcript = result[0].transcript.trim();
-    if (!transcript) return;
+  wakeStarting = true;
+  wakeStartedAt = Date.now();
+  curUtterIdx = -1;
+  utterWakeSeen = false;
+  utterHandled = false;
+  lastInterim = '';
 
-    // ระหว่างเพลง YouTube กำลังเล่นอยู่จริง (state จริงจาก YT.Player ไม่ใช่เดาเอง) ห้ามข้ามการพูด
-    // "จัสมิน" นำแม้จะอยู่ในช่วงคุยต่อเนื่อง/กำลังรอฟังต่อก็ตาม กันเนื้อเพลง/เสียงร้องถูกตีความเป็น
-    // คำสั่งมั่วๆ — ปล่อยให้ตกไปเช็ค extractWakeCommand() ข้างล่างแทน ต้องมีคำว่า "จัสมิน" อยู่จริง
-    if ((followUpActive || isAccumulatingCommand) && !S.ytIsPlaying) {
-      // อยู่ในช่วงคุยต่อเนื่อง หรือกำลังรอ debounce 5 วิเผื่อพูดต่ออยู่ พูดอะไรมาก็ถือเป็นส่วนหนึ่งของ
-      // คำสั่งเดิมเลย ไม่ต้องพูด "จัสมิน" ซ้ำ — queueWakeCommand() เอง (ไม่ส่งทันที รอ 5 วิเผื่อพูดต่อ)
-      queueWakeCommand(transcript);
-      return;
-    }
+  const w = new SpeechRecognitionCtor();
+  wakeRecognition = w;
+  w.lang = 'th-TH';
+  w.interimResults = true;   // จับคำปลุกได้เร็วขึ้นจาก interim + รอด session-end ที่ยังไม่ทันได้ final
+  w.continuous = true;
+  w.maxAlternatives = 3;     // Google มัก transcribe "จัสมิน" เป็นตัวเลือก #2 ตอน #1 เพี้ยน
 
-    const command = extractWakeCommand(transcript);
-    if (command === null) {
-      // เก็บ log ไว้เผื่อ debug กรณี "พูด จัสมิน แล้วไม่ติด" — บางทีสาเหตุคือ Google STT ถอดเสียง
-      // "จัสมิน" เป็นคำไทยที่สะกดต่างจาก WAKE_WORD_PATTERNS ที่มี ไม่ใช่ปัญหาจังหวะ/ไมค์เลย
-      // เปิด DevTools console (F12) ดู "[wake] missed:" เทียบว่า STT ได้ยินเป็นคำว่าอะไรจริงๆ
-      // (ใช้ console.log ไม่ใช่ debug จะได้เห็นเลยไม่ต้องเปิด Verbose — เอาคำที่ขึ้นมาบอกได้ จะเพิ่ม pattern ให้)
-      console.log('[wake] missed:', transcript);
-      return; // ไม่มีคำว่า จัสมิน ในประโยคนี้ ข้ามไป
-    }
-    if (!command) {
-      // เรียกชื่อเฉยๆ ไม่มีคำสั่งตาม -> ตอบรับด้วยเสียงจริง พอตอบเสร็จ (ไมค์เปิดกลับมาเอง) ค่อยรอฟังคำถามต่อ
-      // โดยไม่ต้องพูด "จัสมิน" ซ้ำ (ใช้กลไกช่วงคุยต่อเนื่องเดิม)
-      // นับ 15 วิ "หลังเสียงพูดหยุดจริง" (ผ่าน callback ตอน speak() จบ) ไม่ใช่นับตั้งแต่เริ่มพูด
-      // ไม่งั้นถ้าประโยคยาวจะโดนกินเวลาไปตั้งแต่ตอนยังพูดไม่จบ
-      S.engagedActive = true; // ได้ยินคำว่า "จัสมิน" แล้ว เขียวทันที ไม่ต้องรอพูดจบ
-      const ack = WAKE_ACK_PHRASES[Math.floor(Math.random() * WAKE_ACK_PHRASES.length)];
-      addLine('jusmin', ack);
-      speak(ack, () => {
-        if (S.wakeMode) startFollowUpWindow();
-      });
-      return;
-    }
-    // ได้ยินคำว่า "จัสมิน" + คำสั่งแล้ว — ยังไม่ส่งทันที รอ 5 วิเผื่อพูดต่อ (queueWakeCommand ตั้ง
-    // S.engagedActive/isAccumulatingCommand ให้เองแล้ว พูดต่อโดยไม่ต้องพูด "จัสมิน" ซ้ำได้เลยในช่วงนี้)
-    queueWakeCommand(command);
+  w.onstart = () => {
+    wakeStarting = false;
+    wakeOnstartAt = Date.now();
   };
 
-  wakeRecognition.onerror = (e) => {
+  w.onresult = (e) => {
+    if (S.ttsSpeaking) return; // ผลหลุดมาช่วงเสี้ยววิก่อน abort() มีผลจริง กันอีกชั้น
+    const idx = e.results.length - 1;
+    const result = e.results[idx];
+    if (idx !== curUtterIdx) { // ขึ้นประโยคใหม่ -> เคลียร์ per-utterance state
+      curUtterIdx = idx;
+      utterWakeSeen = false;
+      utterHandled = false;
+      lastInterim = '';
+    }
+
+    // เอา transcript จาก alternative ที่เจอคำปลุก (ถ้า #1 ไม่เจอ ลองไล่ #2 #3)
+    let transcript = (result[0] && result[0].transcript || '').trim();
+    let wakeCmd = extractWakeCommand(transcript);
+    if (wakeCmd === null && result.length > 1) {
+      for (let a = 1; a < result.length; a++) {
+        const alt = (result[a].transcript || '').trim();
+        const w2 = extractWakeCommand(alt);
+        if (w2 !== null) { transcript = alt; wakeCmd = w2; break; }
+      }
+    }
+    if (!transcript) return;
+
+    // ระหว่างคุยต่อเนื่อง / รอ debounce 5 วิ -> พูดอะไรมาก็เป็นส่วนของคำสั่งเดิม (ไม่ต้องพูด "จัสมิน" ซ้ำ)
+    // ยกเว้นตอนเพลง YouTube เล่นอยู่ (state จริงจาก YT.Player) -> บังคับต้องมี "จัสมิน" นำเสมอ
+    if ((followUpActive || isAccumulatingCommand) && !S.ytIsPlaying) {
+      if (result.isFinal) queueWakeCommand(transcript); // เฉพาะ final — กัน interim ต่อท้ายซ้ำจนเพี้ยน
+      else lastInterim = transcript;                    // เผื่อ session ตายก่อน final -> flush ตอน onend
+      return;
+    }
+
+    if (!result.isFinal) {
+      lastInterim = transcript;
+      if (wakeCmd !== null && !utterWakeSeen) {
+        utterWakeSeen = true;
+        S.engagedActive = true; // เขียวทันทีที่ interim เจอคำปลุก = ผู้ใช้รู้ว่าจับได้ (ยังไม่ประมวลผล รอ final)
+      }
+      return;
+    }
+    handleWakeFinal(transcript, wakeCmd);
+  };
+
+  w.onerror = (e) => {
+    wakeStarting = false;
     if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
       stopWakeMode();
       announceSystemNotice('ขออนุญาตใช้ไมโครโฟนก่อนนะคะ ถึงจะเปิดโหมดฟังตลอดได้');
     }
-    // no-speech / aborted / network ปล่อยให้ onend restart ให้เอง
+    // no-speech / aborted / network -> ปล่อยให้ onend restart ให้เอง
   };
 
-  wakeRecognition.onend = () => {
+  w.onend = () => {
+    wakeStarting = false;
+    // session ตายก่อนได้ final — กู้จาก interim ล่าสุด
+    if (lastInterim && !S.ttsSpeaking) {
+      if (utterWakeSeen && !utterHandled) {
+        handleWakeFinal(lastInterim, null);            // "จัสมิน [คำสั่ง]" คำเดียวสั้นๆ
+      } else if ((followUpActive || isAccumulatingCommand) && !S.ytIsPlaying) {
+        queueWakeCommand(lastInterim);                 // ระหว่างคุยต่อเนื่อง
+      }
+    }
+    lastInterim = '';
     if (S.wakeMode) {
-      // เดิมหน่วง 250ms ก่อน restart — Chrome ตัดจบ session ของ continuous:true เองเป็นระยะแม้ไม่มี
-      // error เลย (พฤติกรรมปกติของ Web Speech API ไม่ใช่แค่ตอน error) รอบ restart แบบนี้เลยเกิดขึ้น
-      // บ่อยมากตอนใช้งานจริง ไม่ใช่กรณีพิเศษ — ช่วง 250ms ที่ไมค์ "หูหนวก" สนิทนี้แหละคือสาเหตุที่
-      // พูด "จัสมิน" คำเดียว (สั้นแค่ ~300-500ms) แล้วบางทีไม่ติดเลย เพราะจังหวะพูดดันตรงกับช่วงรีสตาร์ท
-      // พอดี — ลดเหลือ RESTART_DELAY_MS สั้นลงมากเพื่อลดโอกาสพลาดแบบนี้ (ยังเหลือกันชนเล็กน้อยกัน
-      // Chrome โยน "recognition already started" ถ้า start() ใหม่เร็วเกินไปก่อน browser คืนทรัพยากรไมค์)
+      // Chrome ตัดจบ continuous:true เองเป็นระยะแม้ไม่มี error — restart ไวสุดเท่าที่ไม่โดน
+      // "recognition already started" (ตัว killWakeRecognition + wakeStarting คุมการซ้อนแล้ว)
       wakeRestartTimer = setTimeout(runWakeRecognition, WAKE_RESTART_DELAY_MS);
     }
   };
 
   try {
-    wakeRecognition.start();
+    w.start();
   } catch (err) {
-    // start() ซ้อนกันได้ (เช่นช่วงสลับโหมด, หรือ browser ยังไม่คืนทรัพยากรไมค์จาก session ก่อนหน้า)
-    // ลองใหม่อีกรอบสั้นๆ กันเคสที่ onend ของ session เดิมไม่มีทางยิงมาช่วยรีสตาร์ทให้ (session นี้ไม่เคย
-    // start จริงเลยด้วยซ้ำ) ซึ่งจะทำให้โหมดฟังตลอดค้างเงียบไปเฉยๆ โดยไม่มี error ให้เห็นเลย
+    wakeStarting = false;
+    // start() ซ้อนได้ (สลับโหมด / browser ยังไม่คืนทรัพยากรไมค์) — ลองใหม่สั้นๆ กันโหมดค้างเงียบ
     if (S.wakeMode) wakeRestartTimer = setTimeout(runWakeRecognition, WAKE_RESTART_DELAY_MS);
   }
+}
+
+// watchdog: ถ้าเรียก start() ไปแล้วเกิน 5 วิแต่ onstart ไม่เคยมา และไม่มี restart รออยู่ = session ตายเงียบ
+if (SpeechRecognitionCtor) {
+  setInterval(() => {
+    if (!S.wakeMode || S.ttsSpeaking || wakeStarting) return;
+    const now = Date.now();
+    if (wakeStartedAt && now - wakeStartedAt > 5000 && wakeOnstartAt < wakeStartedAt && !wakeRestartTimer) {
+      status.textContent = 'ไมค์หลุด · กำลังต่อใหม่';
+      runWakeRecognition();
+    }
+  }, 3000);
 }
 
 export function startWakeMode() {
@@ -307,15 +390,15 @@ export function stopWakeMode() {
   wakeBtn.classList.remove('active');
   micBtn.disabled = false;
   clearTimeout(wakeRestartTimer);
+  wakeRestartTimer = null;
+  wakeStarting = false;
+  wakeStartedAt = 0;
   expireFollowUpWindow();
   // กันคำสั่งที่กำลังรอ debounce 5 วิอยู่หลุดออกไปส่งทีหลัง ทั้งที่ปิดโหมดฟังตลอดไปแล้ว
   clearTimeout(commandDebounceTimer);
   pendingCommandText = '';
   isAccumulatingCommand = false;
-  if (wakeRecognition) {
-    wakeRecognition.onend = null; // กัน trigger restart ตอนสั่งปิดเอง
-    wakeRecognition.stop();
-  }
+  killWakeRecognition(); // abort + ถอด handler -> ไม่มี onend สั่ง restart
 }
 
 if (SpeechRecognitionCtor) {

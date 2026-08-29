@@ -343,13 +343,13 @@ def save_attachment(query: str, name: str = "", dest: str = "") -> str:
         if len(payload) > _MAX_ATTACH_BYTES:
             skipped.append(f"{fname} (ใหญ่เกิน 25MB)")
             continue
-        sub = ((dest or "").strip().strip("/\\") + "/" + _safe_name(fname)).lstrip("/")
+        sub = ((dest or "").strip().strip("/\\") + "/" + files._safe_name(fname)).lstrip("/")
         ok, tgt = files._resolve_safe_path(sub)
         if not ok:
             files._log_activity("save_attachment", sub, False, "outside allowed scope")
             skipped.append(f"{fname} (นอกขอบเขตที่อนุญาต)")
             continue
-        tgt = _uniq(tgt)
+        tgt = files._uniq(tgt)
         try:
             os.makedirs(os.path.dirname(tgt), exist_ok=True)
             with open(tgt, "wb") as fh:
@@ -496,24 +496,6 @@ def _iter_attachments(msg):
         if payload is None:
             continue
         yield (_dec(fname) or "attachment.bin"), payload
-
-
-def _safe_name(fname: str) -> str:
-    """ชื่อไฟล์แนบมาจากภายนอก — เอาแค่ basename ตัด path/.. /อักขระต้องห้ามของ Windows ออก"""
-    base = os.path.basename((fname or "").replace("\\", "/")).strip().lstrip(".")
-    base = "".join(c for c in base if c >= " " and c not in '<>:"|?*')
-    return base or "attachment.bin"
-
-
-def _uniq(target: str) -> str:
-    """ถ้าไฟล์ชื่อนี้มีอยู่แล้ว เติม ' (2)', ' (3)' ... กันเขียนทับของเดิม"""
-    if not os.path.exists(target):
-        return target
-    root, ext = os.path.splitext(target)
-    i = 2
-    while os.path.exists(f"{root} ({i}){ext}"):
-        i += 1
-    return f"{root} ({i}){ext}"
 
 
 def _pick_kind(query: str, folder: str, cfg) -> str:

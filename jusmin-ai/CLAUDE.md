@@ -110,9 +110,10 @@
 **เปิดวิดีโอเต็มจอ (`control_youtube('fullscreen')` / `'exit_fullscreen'`):**
 - **กลไกหลัก = CSS ไม่ใช่ Fullscreen API** — `requestYoutubeFullscreen()` ใน `app.js` แค่ `ytPanel.classList.add('maximized')` แล้ว CSS `.yt-panel.maximized { position:fixed; inset:0; width:100vw; height:100vh; z-index:500 }` ขยายเครื่องเล่นเต็ม viewport ของเบราว์เซอร์ — **ไม่ต้องมี user gesture เลย เลยสั่งผ่านเสียงได้ทันที ไม่มีปุ่มให้ผู้ใช้กดเปิดเอง** (ผู้ใช้ขอชัดเจนว่าห้ามมีปุ่มกด). ตั้ง flag `ytMaximized` ไว้ track สถานะ
 - **bonus real fullscreen**: หลัง add คลาสแล้ว ลอง `doRequestFullscreen(ytFullscreenTarget())` ต่อ **เฉพาะตอน `navigator.userActivation.isActive`** (มี transient activation จริง = พิมพ์คำสั่ง + Enter) เพื่อซ่อนแถบเบราว์เซอร์เพิ่ม — สั่งด้วยเสียง/auto-restore ไม่มี gesture เลยข้ามไปเลย (CSS `.maximized` เต็มจอเบราว์เซอร์ให้แล้ว) กัน Chrome log `requestFullscreen ... requires a user gesture` รก console. target = `ytPlayer.getIframe()` / fallback `document.getElementById('ytPlayerMount')` (YT API แทน `<div>` ด้วย `<iframe>` id เดิม ต้อง lookup ใหม่ ห้ามใช้ตัวแปรเก่าที่ค้าง node)
-- **ออกจากเต็มจอ**: สั่ง "ออกจากเต็มจอ" (`exit_fullscreen`) / กด `Esc` (keydown handler) / กดปุ่ม `#ytExitFs` (✕ มุมขวาบน โผล่เฉพาะตอน `.maximized`) — `exitYoutubeFullscreen()` ลบคลาส + `document.exitFullscreen()` ถ้า real FS ทำงานอยู่ + เคลียร์ `ytWasMaximizedBeforeEngage` (ยกเลิกการเด้งกลับเต็มจอ). `fullscreenchange` listener: ถ้าผู้ใช้กด Esc ออกจาก real FS ให้ลบ `.maximized` ตามด้วย ไม่ให้ค้างเต็มจอครึ่งๆ. `control_youtube('stop')` เรียก `exitYoutubeFullscreen()` ด้วยเสมอ (ปิดเพลงแล้วไม่เด้งกลับ)
+- **ออกจากเต็มจอ**: สั่ง "ออกจากเต็มจอ" (`exit_fullscreen`) / กด `Esc` (keydown handler — **bail ถ้า media viewer เปิดอยู่ ให้มันจัดการ Esc ก่อน ปิดทีละชั้น**) / กดปุ่ม `#ytExitFs` (✕ มุมขวาบน โผล่เฉพาะตอน `.maximized`) — `exitYoutubeFullscreen()` ลบคลาส + `document.exitFullscreen()` ถ้า real FS ทำงานอยู่ + เคลียร์ `ytWasMaximizedBeforeEngage` (ยกเลิกการเด้งกลับเต็มจอ).
+- **z-index ชั้น overlay**: `.yt-panel.maximized` = 500 · `#mediaGridPanel` = **520** (เหนือ YT เต็มจอ ไม่งั้น grid โดนบัง) · `#mediaViewer` = 600 (ตัวดูรูป/วิดีโอ อยู่บนสุด) `fullscreenchange` listener: ถ้าผู้ใช้กด Esc ออกจาก real FS ให้ลบ `.maximized` ตามด้วย ไม่ให้ค้างเต็มจอครึ่งๆ. `control_youtube('stop')` เรียก `exitYoutubeFullscreen()` ด้วยเสมอ (ปิดเพลงแล้วไม่เด้งกลับ)
 
-- **ย่อจอชั่วคราวตอนเรียก จัสมิน ระหว่างเต็มจอ (ผู้ใช้ขอ)** — เต็มจอ (`.maximized`) แล้วบัง HUD หลัก (เวฟ/สี/แชท z-index ต่ำกว่า 500) หมด เรียก จัสมิน ตอนนั้นเลยไม่เห็น feedback อะไร → แก้โดย **auto-ย่อจอชั่วคราว**: `renderWaveRing()` (loop ทุกเฟรมอยู่แล้ว) จับ **rising edge ของ `engagedActive`** ถ้าตอนนั้น `ytMaximized` เป็น true → `exitYoutubeFullscreen()` แล้วตั้ง `ytWasMaximizedBeforeEngage = true` (ต้องเรียก exit ก่อนแล้วตั้ง flag ทีหลัง เพราะ exit เคลียร์ flag). พอคุยจบ = `expireFollowUpWindow()` (จัสมิน พูดจบ + เงียบครบ 15 วิ ไม่มีถามต่อ — เป็น hook เดียวกับที่ปิดสีเขียว/แชท) → ถ้า `ytWasMaximizedBeforeEngage` และเพลงยังเล่นอยู่ (`ytPlayer && ytPanel.classList.contains('visible')`) → `requestYoutubeFullscreen()` กลับไปเต็มจอเอง. ถามต่อภายใน 15 วิ → timer reset (ผ่าน `startFollowUpWindow()` เดิม) → ยังย่อจออยู่จนกว่าจะเงียบจริง. สั่ง "ออกจากเต็มจอ"/`Esc`/ปิดเพลง ระหว่างช่วงนี้ → เคลียร์ `ytWasMaximizedBeforeEngage` ไม่เด้งกลับ. **ผลลัพธ์: ช่วงคุยกับ จัสมิน ได้ HUD หน้าหลักเต็มรูปแบบเป๊ะ ไม่ต้องทำ mini-overlay แยก**
+- **ย่อจอชั่วคราวตอนเรียก จัสมิน ระหว่างเต็มจอ (ผู้ใช้ขอ)** — เต็มจอ (`.maximized`) แล้วบัง HUD หลัก (เวฟ/สี/แชท z-index ต่ำกว่า 500) หมด เรียก จัสมิน ตอนนั้นเลยไม่เห็น feedback อะไร → แก้โดย **auto-ย่อจอชั่วคราว**: `renderWaveRing()` (loop ทุกเฟรมอยู่แล้ว) จับ **rising edge ของ `engagedActive`** → เรียก **`minimizeYoutubeForEngage()`** (ใน `youtube.js`) — helper atomic: `if (!S.ytMaximized) return; exitYoutubeFullscreen(); S.ytWasMaximizedBeforeEngage = true` (เดิม wave.js ทำ 2 บรรทัดเองแบบพึ่งลำดับ exit→ตั้ง flag — เปราะ ถ้าสลับบรรทัดพัง เงียบๆ; รวมเป็นฟังก์ชันเดียว). พอคุยจบ = `expireFollowUpWindow()` (จัสมิน พูดจบ + เงียบครบ 15 วิ ไม่มีถามต่อ — เป็น hook เดียวกับที่ปิดสีเขียว/แชท) → ถ้า `ytWasMaximizedBeforeEngage` และเพลงยังเล่นอยู่ (`ytPlayer && ytPanel.classList.contains('visible')`) → `requestYoutubeFullscreen()` กลับไปเต็มจอเอง. ถามต่อภายใน 15 วิ → timer reset (ผ่าน `startFollowUpWindow()` เดิม) → ยังย่อจออยู่จนกว่าจะเงียบจริง. สั่ง "ออกจากเต็มจอ"/`Esc`/ปิดเพลง ระหว่างช่วงนี้ → เคลียร์ `ytWasMaximizedBeforeEngage` ไม่เด้งกลับ. **ผลลัพธ์: ช่วงคุยกับ จัสมิน ได้ HUD หน้าหลักเต็มรูปแบบเป๊ะ ไม่ต้องทำ mini-overlay แยก**
 - **ข้อจำกัดจาก `_pending_action` เป็น slot เดียว**: ขอ "เปิดเพลง X แบบเต็มจอ" ในประโยคเดียว LLM เรียก `open_youtube()` + `control_youtube('fullscreen')` ในเทิร์นเดียวไม่ได้ (อันหลังทับ `_pending_action` อันแรก เพลงเลยไม่โหลด) — docstring ของ `control_youtube` สั่งให้ LLM เปิดเพลงก่อน แล้วบอกผู้ใช้สั่ง "เต็มจอ" ต่ออีกที
 
 **ทำไมต้อง "ฝัง player ในหน้าเว็บ" (`YT.Player`) แทนเปิดแท็บแยกด้วย `window.open()` เหมือนตอนแรก:**
@@ -161,7 +162,18 @@
 - **บั๊กจริงที่เจอ: พูด "จัสมิน" คำเดียวแล้วติดบ้างไม่ติดบ้าง** — สาเหตุคือ `wakeRecognition.onend` restart session ใหม่ทุกครั้งที่ session เดิมจบ (Chrome ตัด `continuous:true` session เองเป็นระยะ**แม้ไม่มี error เลย** ไม่ใช่แค่ตอน error เท่านั้น) โค้ดเดิมหน่วง 250ms ก่อน restart ทุกรอบ — ระหว่าง 250ms นั้นไมค์ "หูหนวก" สนิท ถ้าจังหวะพูดคำสั้นๆ อย่าง "จัสมิน" (~300-500ms) ดันตรงกับช่วงรีสตาร์ทพอดี คำนั้นจะหายไปเงียบๆ โดยไม่มี error ให้เห็นเลย — ยิ่งพูดคำเดียวสั้นๆ ยิ่งเสี่ยงกว่าประโยคยาว (มีโอกาสถูก "ตัด" มากกว่า) ตรงกับ pattern ที่ผู้ใช้เจอ แก้โดยลดหน่วงเหลือ `WAKE_RESTART_DELAY_MS = 30` (จาก 250) ลดหน้าต่างที่พลาดได้ลงไปมาก (ทดสอบวัดจริง gap ลดจาก 250ms เหลือ ~31ms) ยังเหลือกันชนเล็กน้อยกัน Chrome โยน "recognition already started" ถ้า restart เร็วเกินไป
   - เพิ่ม retry ใน `catch` ของ `wakeRecognition.start()` ด้วย (เดิมถ้า `start()` throw จะไม่มีอะไรมา restart ให้เลยเพราะ session นั้นไม่เคย start จริง `onend` เลยไม่มีทางยิง) — ป้องกันโหมดฟังตลอดค้างเงียบไปเฉยๆ แบบไม่มี error ให้เห็น
   - `console.log('[wake] missed:', transcript)` ตอน STT ได้ยินอะไรมาแต่ไม่ตรงกับ `WAKE_WORD_PATTERNS` เลย (ใช้ `console.log` ไม่ใช่ `debug` จะได้เห็นใน console โดยไม่ต้องเปิด Verbose) — เปิด F12 ดูว่า STT ถอด "จัสมิน" เป็นคำว่าอะไรตอนเรียกไม่ติด แล้วเอามาเพิ่มใน pattern list
-  - `WAKE_WORD_PATTERNS` (ใน `voice.js`) ตอนนี้กว้างมาก: โรมัน (jusmin/jasmine/yasmin/jazmin/justin/chmin...) + ไทยสลับ จ↔ย↔ญ↔ช, ส↔ด↔ซ↔ช↔ท, เติม/ตัดสระ, มีวรรณยุกต์แทรก (`T = [็-๎]?` คั่นทุกพยางค์), เว้นวรรคกลางคำ, หาง "ทร์/์", ตัว จ นำหล่น (รัสมิน/อัสมิน), และ fallback สั้น "จัส/แจ๊ส/จัสมิ" (ใช้ lookbehind `(?<=^|\s)` กันกิน space นำหน้าจนตัดคำสั่งเพี้ยน). ตั้งใจ **ไม่** จับ "จัด" เดี่ยวๆ (คำไทยปกติ). `extractWakeCommand()` เลือก match ที่ต้นประโยคสุด แล้ว slice ส่วนที่เหลือเป็นคำสั่ง
+  - `WAKE_WORD_PATTERNS` (ใน `voice.js`) ตอนนี้กว้างมาก: โรมัน (jusmin/jasmine/yasmin/jazmin/`\bjustin\b`/chmin...) + ไทยสลับ จ↔ย↔ญ↔ช, ส↔ด↔ซ↔ช↔ท, เติม/ตัดสระ, มีวรรณยุกต์แทรก (`T = [็-๎]?` คั่นทุกพยางค์), เว้นวรรคกลางคำ, หาง "ทร์/์", ตัว จ นำหล่น (รัสมิน/อัสมิน), และ fallback สั้น "จัส/จัสมิ" (lookbehind `(?<=^|\s)`). ตั้งใจ **ไม่** จับ "จัด" เดี่ยวๆ + "แจ๊ส" เดี่ยวๆ (jazz) + "justin" ที่เป็น substring (adjusting). `extractWakeCommand()` เลือก match ต้นประโยคสุด แล้ว slice ส่วนที่เหลือเป็นคำสั่ง
+
+- **รื้อความเสถียร wake mode (ผู้ใช้บ่น "เรียกไม่ค่อยติด") — `runWakeRecognition()` เขียนใหม่:**
+  - **`interimResults: true`** (เดิม false) — จับคำปลุกจาก interim ได้เร็วขึ้น 300–800ms + รอด session-end ที่ยังไม่ทันได้ `isFinal`
+  - **`maxAlternatives = 3`** — วน `result[0..2]` เช็ค pattern ทุก alternative (Google มัก transcribe "จัสมิน" เป็นตัวเลือก #2 ตอน #1 เพี้ยน) ใช้ alternative ที่เจอคำปลุกเป็น transcript
+  - **per-utterance state** (`curUtterIdx`/`utterWakeSeen`/`utterHandled`/`lastInterim`) — interim ที่เจอคำปลุก → `S.engagedActive = true` ทันที (feedback) แต่รอ `isFinal` ถึงประมวลผลจริง (ใช้ text final ที่สะอาด ไม่ต่อ interim ซ้ำ) · `utterHandled` กันยิงซ้ำ
+  - **`onend` fallback** — ถ้า session ตายก่อนได้ final แต่ interim เคยเจอคำปลุก → `handleWakeFinal(lastInterim)` (กู้ "จัสมิน" คำเดียวสั้นๆ ที่หายบ่อยสุด) · ระหว่างคุยต่อเนื่องก็ flush `lastInterim` เข้า `queueWakeCommand`
+  - **`killWakeRecognition()`** (`abort()` + ถอด handler) เรียกก่อนสร้าง instance ใหม่ทุกครั้ง + flag `wakeStarting` กัน `start()` ซ้อน — ตัดปัญหา instance เก่ายังฟัง/`onend` เก่าสั่ง restart ทับจน instance ทวีคูณ (pause/stopWakeMode ใช้ตัวนี้ด้วย)
+  - **watchdog** `setInterval(3000)` — ถ้าเรียก `start()` เกิน 5 วิแต่ `onstart` ไม่มา + ไม่มี restart รอ = session ตายเงียบ → force `runWakeRecognition()` + status "ไมค์หลุด · กำลังต่อใหม่"
+  - **`flashHeard(transcript)`** — `onresult` ที่ได้ยินแต่ไม่ตรงคำปลุก → status เด้ง `STANDBY · ได้ยิน "..."` 1.8 วิ (บอกผู้ใช้ว่าไมค์ทำงาน เป็นปัญหา match ไม่ใช่ไมค์ตาย)
+  - `TTS_RESUME_DELAY_MS` 500 → **200** (ไมค์กลับมาไวขึ้นหลัง จัสมิน พูดจบ)
+  - **ที่ยังแก้ไม่ได้** (ข้อจำกัด Web Speech API): `start()` latency ภายในเบราว์เซอร์, session cutoff, พึ่งเน็ต/Google — หายจริงต้องย้าย STT server-side (openWakeWord + faster-whisper) ตาม ROADMAP Phase 2
 - **Debounce 5 วิก่อนส่งคำสั่งจริง (`COMMAND_DEBOUNCE_MS`)** — ผู้ใช้ขอเพราะเดิม `wakeRecognition.onresult` ส่งคำสั่งทันทีที่ recognition ตัดจบประโยค (isFinal) ซึ่งเกิดขึ้นเร็วกว่าที่คิด ถ้าหยุดพูดแป๊บนึงเพื่อคิดคำต่อ ท่อนแรกจะถูกตัดส่งไปเป็นคำสั่งที่ยังพูดไม่จบเลย — แก้ด้วย `queueWakeCommand(text)`/`flushWakeCommand()`: แทนที่จะ `form.requestSubmit()` ทันที จะต่อท้อความเข้ากับ `pendingCommandText` แล้วรีเซ็ตนาฬิกา 5 วิใหม่ทุกครั้งที่ได้ยินเสียงเพิ่ม จนกว่าจะเงียบจริงๆ ครบ 5 วิถึงส่งเป็นข้อความเดียว
   - ระหว่างรอ debounce (`isAccumulatingCommand = true`) พูดต่อได้โดย**ไม่ต้องพูด "จัสมิน" ซ้ำ** — เงื่อนไขใน `onresult` เปลี่ยนจาก `if (followUpActive && !ytIsPlaying)` เป็น `if ((followUpActive || isAccumulatingCommand) && !ytIsPlaying)` ไม่งั้นท่อนพูดต่อ (ที่ไม่มีคำว่า จัสมิน แน่นอนเพราะเป็นประโยคเดียวกัน) จะหลุดไปเช็ค `extractWakeCommand()` แล้วโดนทิ้งเป็น "missed" ไปเฉยๆ
   - **ผลข้างเคียงที่ตั้งใจยอมรับ**: ทุกคำสั่งเสียง (ไม่ว่าจะหยุดคิดหรือพูดรวดเดียวจบ) จะช้าลง 5 วิเทียบกับก่อนหน้านี้เสมอ เพราะระบบรอดูก่อนว่าจะพูดต่อไหมทุกครั้ง ไม่ใช่แค่ตอนตรวจจับว่าหยุดกลางคัน — เป็น trade-off ที่ผู้ใช้ยอมรับเพื่อแลกกับไม่ให้ประโยคถูกตัดกลางคัน
@@ -356,6 +368,58 @@ threading.Thread(target=_scheduler_loop, daemon=True, name="jusmin-scheduler").s
 **personality.py** — เติมย่อหน้าใน `SYSTEM_PROMPT` บอก persona ว่าจำเรื่องผู้ใช้ได้ / จดงาน / ตั้งเตือน / เช็ค-ส่งเมล / สรุปวันได้
 + ให้ `remember()` ข้อมูลส่วนตัวที่น่าจะใช้ภายหลังเอง + แปลงเวลากำกวมเป็น ISO ก่อนเรียก tool + ส่งเมลต้องทวนยืนยันก่อน
 
+## `read_url` + `analyze_image` (Phase 1 · Tier 1 · plan `plans/01-read-url-analyze-image.md`)
+
+สอง tool แรกของแผน "จัสมิน ระดับ Jarvis" (ดู `../ROADMAP.md`). chat session = **26 tools** หลังเพิ่ม 2 ตัวนี้
+
+**`read_url(url)` — `tools/web.py`** (ข้าง `search_web`) · dep ใหม่: `trafilatura` (ฟรี ไม่ต้อง key)
+- ใช้เมื่อผู้ใช้ให้ลิงก์แล้วขอ อ่าน/สรุป/ตอบจากหน้านั้น — SYSTEM_PROMPT สั่งว่า "อย่าเดาจากตัว URL"
+- **`_normalize_url()`** — percent-encode path/query ที่มีอักขระ non-ASCII (URL ไทยที่ paste มาดิบ) + IDNA hostname + ตัด fragment · `%` อยู่ใน `safe` เลยไม่ double-encode ลิงก์ที่ encode มาแล้ว
+- **`_url_is_safe()` = SSRF guard** — ต้อง http/https + `socket.getaddrinfo(host)` แล้วเช็คทุก IP ที่ resolve ได้ ปฏิเสธถ้าเป็น `is_private / is_loopback / is_link_local / is_reserved / is_multicast / is_unspecified` — กัน LLM ชี้ url ไป `127.0.0.1:8000` (server ตัวเอง), `169.254.169.254` (cloud metadata), IP ในวง LAN · **ข้อจำกัดที่ยอมรับ:** ยังมีช่อง TOCTOU + redirect ตาม (trafilatura ไม่เปิดให้ปิด redirect) — พอสำหรับใช้ส่วนตัวในบ้าน
+- `trafilatura.fetch_url(url, config=_tf_cfg)` (timeout 10 วิ แทน default 30) → `trafilatura.extract(html, include_comments=False, include_tables=True, favor_precision=True)` · หัวข้อจาก `extract_metadata().title` · ตัดที่ `_MAX_URL_CHARS = 8000`
+- error ทุกแบบ (SSRF / โหลดไม่ได้ / ไม่มีบทความ / ต้องรัน JS) → คืน string graceful · **ไม่มี `pending_action`** — Gemini สรุปเอง
+
+**`analyze_image(path, question="")` — `tools/vision.py` (ไฟล์ใหม่)** · ดูรูปด้วย Gemini multimodal
+- **security = ตัวเดียวกับ file tools** — `files.get_allowed_folder()` + `files._resolve_safe_path(path)` (containment ด้วย `commonpath()`) + `files._log_activity("analyze_image", ...)` ลง audit log เดียวกัน · จำกัด ext `.png/.jpg/.jpeg/.webp` (+`.gif/.bmp/.tiff` ถ้ามี Pillow)
+- **nested Gemini call** — tool function รันซ้อนอยู่ใน automatic function calling ของ `chat` อยู่แล้ว จะแทรกรูปเข้า `chat` โดยตรงไม่ได้ เลยยิง `client.models.generate_content()` ของตัวเอง · **`_get_client()` = client แยกแบบ lazy** (อ่าน `GEMINI_API_KEY` ตอนเรียก เหมือน `mail.py`) — กัน circular import (server.py import tools)
+- call config: `system_instruction` "ตอบไทยสั้น ไม่มี markdown" (ผลลัพธ์ป้อนกลับเข้า chat ให้ จัสมิน เรียบเรียง) + `automatic_function_calling(disable=True)` (ไม่มี tool + กัน warning รก log)
+- รุ่น: `os.environ.get("VISION_MODEL", "gemini-3.5-flash-lite")` — **`-flash-lite` รับรูปได้อยู่แล้ว** (ทดสอบจริง) · env var ไว้เผื่อบัญชีไหนรุ่น default ไม่รับ ให้ตั้ง `gemini-3.5-flash`
+- Pillow (optional, อยู่ใน `requirements.txt`): มี → `_prep_bytes()` ย่อด้านยาว > 1024px + แปลง mode/format ก่อนส่ง (ประหยัด token/quota) · ไม่มี → ส่งดิบ + reject ext ที่ต้องแปลง + reject > 12MB
+- **quota drift ที่ยอมรับ**: call ตัวนี้ไม่ถูกนับใน `quota_state["used_today"]` ของ `server.py` (นับแค่ `chat.send_message`)
+
+**`.env`**: `VISION_MODEL=` (ไม่บังคับ) · **`requirements.txt`**: +`trafilatura` +`Pillow` (Pillow มีคอมเมนต์ว่าไม่บังคับ)
+
+## ค้น / ดาวน์โหลด / เปิดดู รูป+วิดีโอ (Phase 1 · plan `plans/02-media.md`)
+
+3 tool ใน **`tools/media.py`** (ใหม่) · chat = **29 tools** · dep ใหม่: `imageio-ffmpeg` (bundled ffmpeg binary — yt-dlp ต่อ video+audio ของ YouTube ยุคใหม่ที่ progressive ถูกถอดแล้ว)
+
+**`search_media(query, kind="image")`**
+- `image` → `ddgs.images(max_results=12)` (retry 1 ครั้ง) · `video` → **`yt-dlp ytsearch{8}`** (`_yt_search_videos` — `ddgs.videos` เทสแล้วคืน `No results` ตลอด, yt-dlp เชื่อถือได้กว่า + โหลดได้จริง)
+- normalize → `{n, kind, title, thumb, url, page, source, duration?}` · เก็บ `_last_results`/`_last_kind` (module global) ให้ `#N` อ้าง
+- `_state.pending_action = {"type":"show_media_results", "kind", "query", "items":[...]}` → HUD grid · `_norm_kind` map คำไทย ("รูป"/"คลิป"/"วิดีโอ")
+
+**`download_media(ref, dest="")`**
+- `ref` = `"#3"` / `"1,3,5"` / `"all"` / `"current"` (อันที่เปิดใน viewer) / URL เต็ม (`_resolve_refs` + `_sniff_kind` เดา image/video จาก host+ext)
+- `dest` = โฟลเดอร์ย่อยที่ **จัสมิน เลือกเอง** (ผู้ใช้สั่ง) · `files._resolve_safe_path(dest)` บังคับ containment + `os.makedirs`
+- **รูป (sync)**: `web._url_is_safe` (SSRF, reuse) → `requests.get(stream)` → เช็ค `Content-Type: image/*` → ext จาก content-type → `files._safe_name`+`files._uniq` → soft-ceiling 60MB (abort+ลบ) → `files._log_activity`. โหลดเสร็จ **auto-open viewer** (`_show_viewer`)
+- **วิดีโอ (async)**: `threading.Thread(daemon)` → `yt_dlp.YoutubeDL` (`_FFMPEG` = system ffmpeg หรือ `imageio_ffmpeg.get_ffmpeg_exe()`; มี ffmpeg → `bestvideo*+bestaudio` merge mp4, ไม่มี → `best[acodec!=none][vcodec!=none]`) → เสร็จ `notify.push(...,"media")` → `notify.js` พูด. `_video_jobs` set จำกัด 2 อันพร้อมกัน
+- คืน string สรุปทันที (วิดีโอไม่รอ)
+
+**`view_media(target="", action="open", seconds=0)`**
+- `action`: open / close (ปิด viewer + grid) / next / prev / **slideshow** (เล่นวนอัตโนมัติ) / **stop** (หยุดสไลด์ ยังดูค้าง) · `seconds` = ช่วงสไลด์ (default 6)
+- `target`: `"#N"` (เปิด**จากเว็บตรงๆ** ไม่โหลด, gallery = ผลค้นทั้งชุด) · path ไฟล์ที่โหลดมา · **ชื่อโฟลเดอร์** (`_local_gallery` → รูป/วิดีโอทุกไฟล์ในนั้น เรียงชื่อ) · `""`/`"current"` (viewer ที่ค้างอยู่ ไม่งั้นผลค้นล่าสุด)
+- `search_media` `_viewer_list.clear()` ทุกครั้ง → "เล่นสไลด์"/"เปิด" แบบไม่ระบุ target หลังค้น = อิงผลค้นชุดใหม่
+- `_show_viewer(items, index, slideshow=0)` ส่ง **`{"type":"show_media", "index", "list":[...], "slideshow": N}`** — gallery ทั้งชุดทีเดียว → HUD เลื่อน prev/next + เล่นสไลด์ (`setInterval`, วนด้วย modulo) ในเครื่องเอง ไม่ต้อง round-trip (voice "ถัดไป"/"หยุด" ยังผ่าน server ได้) · เลื่อนเองระหว่างสไลด์ = รีเซ็ตนาฬิกา เล่นต่อ
+- `_local_item`/`_remote_item` → `{src, kind, name, source, page, ref?}` · `ref` (ลำดับใน `_last_results`) มีเฉพาะผลค้น → ปุ่ม "⬇ ดาวน์โหลด" ใน viewer โผล่เฉพาะกรณีนั้น (กดแล้ว client สั่ง "โหลดอันที่ N")
+
+**Endpoint `GET /api/media?path=`** (`server.py`) — `tools.files._resolve_safe_path(path)` เช็ค containment ฝั่ง server เอง (ห้ามเชื่อ query param) + ext ∈ `_MEDIA_EXTS` (รูป+วิดีโอ) → `FileResponse` (รองรับ `Range` เอง → `<video>` seek ได้) · ไม่มี auth (personal-use/localhost)
+
+**HUD** — `static/js/media.js` + `static/css/media.css` (`@import` ใน style.css ก่อน core.css) + markup `#mediaGridPanel`/`#mediaViewer` ใน `index.html` + dispatch `show_media_results`/`show_media`/`hide_media` ใน `main.js` + refs ใน `dom.js`
+- grid: tile responsive, เลข badge, ▶+duration ถ้าวิดีโอ, skeleton/`onerror`, คลิก → สั่ง "เปิดอันที่ N"
+- viewer: overlay เต็มจอ (`z-index:600`), `<img>`/`<video controls autoplay>`, ‹ › + `←/→` เลื่อน (client-side จาก `list`), คลิกรูป = zoom 1x/2x, ✕/Esc/คลิก backdrop ปิด, `<video>` → `pause()`+`removeAttribute('src')`+`load()` ตอนปิด
+
+**shared helpers ย้ายที่**: `_safe_name` / `_uniq` ย้ายจาก `tools/mail.py` → `tools/files.py` (mail.py import `files._safe_name`/`files._uniq` แทน) — ใช้ร่วมกับ media.py
+
 ## ตำแหน่งที่ตั้ง (geolocation) — `get_weather()` ใช้พิกัดจริงของเบราว์เซอร์
 
 ผู้ใช้ถามอากาศ "ที่นี่"/ไม่ระบุเมือง แล้วต้องไม่ต้องพิมพ์ชื่อเมืองเอง — โครงเดียวกับ folder picker / `_pending_action` เป๊ะ: **ข้อมูล (พิกัด) อยู่ฝั่ง browser แต่ tool รันฝั่ง server** เลยต้องให้ client แนบพิกัดมากับ request
@@ -401,7 +465,9 @@ jusmin-ai/
 │   ├── __init__.py   #   re-export ทุกชื่อ public + `from . import notify, reminders`
 │   ├── _state.py     #   pending_action (คำสั่งที่ส่งให้ app.js ทำจริงในเบราว์เซอร์) — weather+youtube share กัน
 │   ├── db.py         #   SQLite layer (jusmin.db) — connect/query/execute + schema memory/tasks/reminders
-│   ├── web.py        #   search_web (ddgs)
+│   ├── web.py        #   search_web (ddgs) + read_url (trafilatura + SSRF guard + URL normalize)
+│   ├── vision.py     #   analyze_image — ดูรูปในโฟลเดอร์ที่อนุญาต ผ่าน Gemini (nested call, client แยก lazy)
+│   ├── media.py      #   search_media / download_media (รูป sync, วิดีโอ async+yt-dlp+ffmpeg) / view_media (overlay)
 │   ├── weather.py    #   get_weather + set_client_location + view โฟกัส (now/rain/temp/wind/uv/sun/forecast)
 │   ├── youtube.py    #   open_youtube / control_youtube (yt-dlp)
 │   ├── files.py      #   list_files/read_file/create_folder/write_file/delete_path + audit log + persist folder
@@ -415,7 +481,7 @@ jusmin-ai/
 ├── static/
 │   ├── index.html    # โครง HUD — <link style.css> + <script type="module" src="js/main.js">
 │   ├── style.css      # แค่ list ของ @import css/*.css (ลำดับ = cascade)
-│   ├── css/          # base / boot-fx / controls / sidebar / core / panels / youtube / weather / chat
+│   ├── css/          # base / boot-fx / controls / sidebar / core / panels / youtube / weather / media / chat
 │   └── js/           # ES modules:
 │       ├── main.js       #   entry — import ทุกโมดูล + form submit handler + bootstrap ที่ท้าย
 │       ├── state.js      #   `S` = object เดียวสำหรับ flag ที่ใช้ข้ามโมดูล (S.engagedActive, S.ttsSpeaking, S.ytPlayer, ...)
@@ -429,7 +495,8 @@ jusmin-ai/
 │       ├── hud.js        #   boot + particles + idle-tilt + clock + latency graph + quota gauge + link health
 │       ├── settings.js   #   sidebar ⚙ + ปุ่มเลือกโฟลเดอร์
 │       ├── geo.js        #   navigator.geolocation -> S.clientGeo (แนบไป /api/chat)
-│       └── notify.js     #   poll /api/notifications ทุก 10 วิ -> announceSystemNotice + speak (reminder เด้ง)
+│       ├── notify.js     #   poll /api/notifications ทุก 10 วิ -> announceSystemNotice + speak (reminder เด้ง)
+│       └── media.js      #   grid ผลค้นรูป/วิดีโอ + viewer overlay เต็มจอ (prev/next/zoom/keyboard)
 ├── voices/  logs/  venv/  .env  file_access_config.json  jusmin.db   # ไม่ commit
 ├── .gitignore
 └── requirements.txt
