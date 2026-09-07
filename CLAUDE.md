@@ -6,12 +6,12 @@
 >
 > โครงบนดิสก์ของเจ้าของโปรเจกต์:
 > ```
-> D:\projecti-smartroom\        <- git repo #1 · branch jusmin · port 8000
-> ├── jusmin-ai\                    <- ตัวโปรเจคจัสมิน
-> ├── setup.bat  dev.bat  deploy.bat
-> └── jarvis-ai\                    <- git repo #2 (แยกอิสระ) · branch jarvis · port 8001
->     ├── server.py  tools\  static\   <- โฟลเดอร์นี้ = ที่คุณอยู่ตอนนี้
->     └── setup.bat  dev.bat  deploy.bat
+> D:/project/ai-smartroom/          <- git repo #1 · branch jusmin · port 8000
+> |-- jusmin-ai/                    <- ตัวโปรเจคจัสมิน
+> |-- setup.bat  dev.bat  deploy.bat
+> `-- jarvis-ai/                    <- git repo #2 (แยกอิสระ) · branch jarvis · port 8001
+>     |-- server.py  tools/  static/    <- โฟลเดอร์นี้ = ที่คุณอยู่ตอนนี้
+>     `-- setup.bat  dev.bat  deploy.bat
 > ```
 > repo ชั้นนอกใส่ `/jarvis-ai/` ไว้ใน `.gitignore` แล้ว จะได้ไม่ดูดโฟลเดอร์นี้เข้าไปเป็น submodule
 >
