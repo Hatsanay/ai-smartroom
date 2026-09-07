@@ -193,7 +193,8 @@ deps ใหม่: `openwakeword`, `faster-whisper`, `sounddevice` (`websockets`
 
 > **implementation plan ละเอียดต่อฟีเจอร์** อยู่ใน `jusmin-ai/plans/NN-<ชื่อ>.md` — เขียนตอนเริ่มแต่ละอัน
 > - [`plans/01-read-url-analyze-image.md`](jusmin-ai/plans/01-read-url-analyze-image.md) — code-complete (branch `phase1-tier1`), รอ user เทสเบราว์เซอร์ + commit
-> - [`plans/02-media.md`](jusmin-ai/plans/02-media.md) — ค้น/โหลด/เปิดดู รูป+วิดีโอ — code-complete (branch `phase1-tier1`), รอ user เทส + commit
+> - [`plans/02-media.md`](jusmin-ai/plans/02-media.md) — ค้น/โหลด/เปิดดู รูป+วิดีโอ — **เสร็จ + deploy แล้ว**
+ - [`plans/03-bambu-printer.md`](jusmin-ai/plans/03-bambu-printer.md) — ต่อเครื่องพิมพ์ 3D Bambu Lab (MQTT + FTPS + สไลซ์อัตโนมัติ + กล้อง + แจ้งเตือน) — **เขียนแผนไว้แล้ว รอผู้ใช้ซื้อเครื่อง**
 
 ### Tier 1 — แกน Jarvis · เข้ากับโครงเดิม · **= งาน Phase 1**
 
@@ -213,8 +214,9 @@ deps ใหม่: `openwakeword`, `faster-whisper`, `sounddevice` (`websockets`
    - `deploy/jusmin.service` (systemd, `Restart=always`, `WantedBy=multi-user.target`) + คู่มือ
    - HUD เปิดบนแท็บเล็ต/มือถือในบ้าน ชี้มาที่ IP ของ Pi · **headless แท้ (ไม่มีเบราว์เซอร์) รอ STT ของ Phase 2**
 
-**เลื่อนไว้ (ยังไม่มีฮาร์ดแวร์ ณ 2026-08-29):**
+**เลื่อนไว้ (รอฮาร์ดแวร์):**
 - ⏸️ **`control_home()` + Home Assistant + safety whitelist** — `tools/home.py` เรียก HA REST API (`/api/services/...`) · whitelist entity+action ก่อนสั่ง (ไม่เชื่อ LLM) · confirm-gate ใช้ pattern เดียวกับ `send_email` (`_pending_send`) · เริ่มเมื่อมี HA + ESP32/รีเลย์/อุปกรณ์
+- ⏸️ **เครื่องพิมพ์ 3D Bambu Lab** — `tools/printer.py` · MQTT 8883 (สถานะ+สั่งงาน) + FTPS 990 (อัปโหลด) + Bambu Studio CLI (สไลซ์อัตโนมัติ) + กล้อง→`analyze_image` + watcher แจ้งเตือนเชิงรุก · **ต้องเปิด Developer Mode ที่เครื่อง (แลกกับเสีย Bambu Handy จากนอกบ้าน)** · แผนละเอียด + ข้อมูลที่ค้นมาแล้วอยู่ใน [`plans/03-bambu-printer.md`](jusmin-ai/plans/03-bambu-printer.md) · เริ่มเมื่อผู้ใช้ซื้อเครื่อง (ไม่ต้องซื้ออุปกรณ์เสริมอื่น)
 
 > **หลัง Tier 1 เสร็จ → ทำ Tier 2 → Tier 3 ต่อ** (ยังอยู่ Phase 1 / บนเว็บ) แล้วค่อยขึ้น Phase 2
 
