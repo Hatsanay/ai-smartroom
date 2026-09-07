@@ -7,7 +7,7 @@ REM   2) activate venv
 REM   3) run server.py  + open the browser automatically
 REM ============================================================
 setlocal
-cd /d "%~dp0jusmin-ai"
+cd /d "%~dp0"
 
 echo [dev] 1/3  Freeing port 8000 (killing old JUSMIN server if any)...
 for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":8000" ^| findstr "LISTENING"') do (

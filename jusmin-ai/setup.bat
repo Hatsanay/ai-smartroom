@@ -45,7 +45,7 @@ pause
 exit /b 1
 
 :HAVE_PYTHON
-cd /d "%ROOT%jusmin-ai"
+cd /d "%ROOT%"
 
 echo [setup] 1/3  Creating virtual environment...
 if exist "venv\Scripts\activate.bat" (
