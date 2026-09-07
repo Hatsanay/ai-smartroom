@@ -1,4 +1,5 @@
 @echo off
+title JUSMIN - setup
 REM ============================================================
 REM  setup.bat  - run ONCE right after cloning
 REM   0) install Python 3.10+ if missing (via winget)

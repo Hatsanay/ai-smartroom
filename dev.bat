@@ -1,14 +1,15 @@
 @echo off
+title JUSMIN (dev) - port 8000
 REM ============================================================
 REM  dev.bat  - one click: run the จัสมิน web server (dev)
-REM   1) cancel : kill whatever is holding port 8000
+REM   1) cancel : kill whatever is holding port 8000 (จาร์วิส อยู่ 8001 - ไม่ยุ่งกัน)
 REM   2) activate venv
 REM   3) run server.py  + open the browser automatically
 REM ============================================================
 setlocal
 cd /d "%~dp0jusmin-ai"
 
-echo [dev] 1/3  Freeing port 8000 (killing old server if any)...
+echo [dev] 1/3  Freeing port 8000 (killing old JUSMIN server if any)...
 for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":8000" ^| findstr "LISTENING"') do (
     echo       - taskkill PID %%p
     taskkill /F /PID %%p >nul 2>&1
