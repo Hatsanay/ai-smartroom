@@ -529,7 +529,7 @@ cd jarvis-ai
 venv\Scripts\activate
 python server.py
 ```
-แล้วเปิดเบราว์เซอร์ไปที่ `http://127.0.0.1:8000/` — ตอนนี้ chat session เป็นแบบ session เดียวเก็บใน memory ของ server (เหมาะกับ personal use คนเดียว ยังไม่รองรับหลาย user/หลายแท็บพร้อมกันแบบแยกบทสนทนา)
+แล้วเปิดเบราว์เซอร์ไปที่ `http://127.0.0.1:8001/` — ตอนนี้ chat session เป็นแบบ session เดียวเก็บใน memory ของ server (เหมาะกับ personal use คนเดียว ยังไม่รองรับหลาย user/หลายแท็บพร้อมกันแบบแยกบทสนทนา)
 
 **หมายเหตุ:** ทุกครั้งที่แก้ `server.py`/`tools.py`/`tts.py` ต้อง restart server เอง (กด Ctrl+C แล้วรัน `python server.py` ใหม่) ไม่มี auto-reload — server เริ่มช้าลงกว่าเดิมเล็กน้อย (~3-5 วิ) เพราะต้องโหลดโมเดลเสียง TTS ตอน start
 

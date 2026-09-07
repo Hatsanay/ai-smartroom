@@ -1,15 +1,16 @@
 @echo off
+title JARVIS (dev) - port 8001
 REM ============================================================
-REM  dev.bat  - one click: run the จาร์วิส web server (dev)
-REM   1) cancel : kill whatever is holding port 8000
+REM  dev.bat  - one click: run the จาร์วิส web server (dev)  [port 8001]
+REM   1) cancel : kill whatever is holding port 8001 (จัสมิน อยู่ 8000 - ไม่ยุ่งกัน)
 REM   2) activate venv
 REM   3) run server.py  + open the browser automatically
 REM ============================================================
 setlocal
 cd /d "%~dp0jarvis-ai"
 
-echo [dev] 1/3  Freeing port 8000 (killing old server if any)...
-for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":8000" ^| findstr "LISTENING"') do (
+echo [dev] 1/3  Freeing port 8001 (killing old JARVIS server if any)...
+for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":8001" ^| findstr "LISTENING"') do (
     echo       - taskkill PID %%p
     taskkill /F /PID %%p >nul 2>&1
 )
@@ -25,7 +26,7 @@ echo [dev] 2/3  Activating virtual environment...
 call venv\Scripts\activate.bat
 
 echo [dev] 3/3  Starting server + opening browser...  (Ctrl+C to stop)
-start "" /min cmd /c "timeout /t 4 /nobreak >nul & start http://127.0.0.1:8000/"
+start "" /min cmd /c "timeout /t 4 /nobreak >nul & start http://127.0.0.1:8001/"
 python server.py
 
 echo.

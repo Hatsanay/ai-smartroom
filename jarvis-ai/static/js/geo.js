@@ -34,8 +34,8 @@ export function refreshClientGeo() {
   }
   if (!window.isSecureContext) {
     // geolocation ใช้ได้เฉพาะ secure context — http://127.0.0.1 / http://localhost / https เท่านั้น
-    // ถ้าเปิดผ่าน IP เครื่องในวง LAN (http://192.168.x.x:8000) เบราว์เซอร์จะบล็อกเงียบๆ
-    console.warn('[geo] ไม่ใช่ secure context — เปิดหน้าเว็บผ่าน http://127.0.0.1:8000 (ไม่ใช่ IP เครื่อง)');
+    // ถ้าเปิดผ่าน IP เครื่องในวง LAN (http://192.168.x.x:8001) เบราว์เซอร์จะบล็อกเงียบๆ
+    console.warn('[geo] ไม่ใช่ secure context — เปิดหน้าเว็บผ่าน http://127.0.0.1:8001 (ไม่ใช่ IP เครื่อง)');
     return;
   }
   geoInFlight = true;

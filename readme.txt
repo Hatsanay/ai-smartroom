@@ -57,7 +57,7 @@ Jarvis — AI Assistant Project
 แบบเว็บ (แนะนำ — มีหน้าจอ HUD, พิมพ์หรือพูดคุยได้ พูดตอบเป็นเสียงจริง):
      python server.py
    แล้วเปิดเบราว์เซอร์ (แนะนำ Chrome หรือ Edge เพราะต้องใช้ Web Speech API) ไปที่
-     http://127.0.0.1:8000/
+     http://127.0.0.1:8001/
 
 แบบ CLI (คุยผ่าน terminal เฉยๆ พิมพ์อย่างเดียว ไม่มีเสียง เหมาะเทสเร็วๆ):
      python jarvis.py

@@ -323,4 +323,4 @@ threading.Thread(target=_scheduler_loop, daemon=True, name="jarvis-scheduler").s
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="127.0.0.1", port=8001)  # 8001 = จาร์วิส (จัสมิน ใช้ 8000) รันพร้อมกันได้
