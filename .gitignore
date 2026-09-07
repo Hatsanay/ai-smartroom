@@ -1,1 +1,4 @@
 deploy.bat
+
+# จาร์วิส = git repo แยกอิสระที่ซ้อนอยู่ในโฟลเดอร์นี้ (branch jarvis) - ห้าม track
+/jarvis-ai/
