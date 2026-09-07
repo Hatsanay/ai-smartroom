@@ -1,8 +1,8 @@
-# จัสมิน — แผนพัฒนา (Roadmap)
+# จาร์วิส — แผนพัฒนา (Roadmap)
 
-> **ชื่อผู้ช่วยคือ "จัสมิน" เสมอ — ไม่เปลี่ยน** "Jarvis" ในเอกสารนี้เป็นแค่ **เกณฑ์เทียบความสามารถ**
-> (AI สไตล์ Iron Man ที่บุคลิก จัสมิน อ้างอิงอยู่แล้ว) ไม่ใช่ชื่อใหม่ ห้าม rename
-> **เป้าหมาย:** ยกความสามารถของ จัสมิน ให้ใกล้เคียงระดับ Jarvis มากที่สุด
+> **ชื่อผู้ช่วยคือ "จาร์วิส" เสมอ — ไม่เปลี่ยน** "Jarvis" ในเอกสารนี้เป็นแค่ **เกณฑ์เทียบความสามารถ**
+> (AI สไตล์ Iron Man ที่บุคลิก จาร์วิส อ้างอิงอยู่แล้ว) ไม่ใช่ชื่อใหม่ ห้าม rename
+> **เป้าหมาย:** ยกความสามารถของ จาร์วิส ให้ใกล้เคียงระดับ Jarvis มากที่สุด
 > **ข้อกำหนด:** อยู่บน **สถาปัตยกรรมเดิม** — FastAPI + HUD (vanilla JS ES modules) + Gemini function calling + `tools/` package
 > ไม่ย้ายไป agent framework สำเร็จรูป (เหตุผลท้ายเอกสาร)
 > **รูปแบบสุดท้าย: ไม่ใช่แค่เว็บ** — ต้องมี **โปรแกรม desktop รันได้ทั้ง Windows และ Linux** (+ headless บน Pi, + Telegram) — ดูหัวข้อ "รูปแบบที่ส่งมอบ"
@@ -35,7 +35,7 @@ Phase นี้เท่านั้นที่ต้องทำเรื่�
 ## สถานะปัจจุบัน (ทำแล้ว)
 
 - ✅ **Group A (เลขา)** — `memory` / `tasks` / `reminders` / `email` / `daily_briefing` (commit แล้ว)
-- ✅ **เสียง** — wake word "จัสมิน" (regex กว้าง) + คุยต่อเนื่อง 15 วิ + TTS ไทย server-side (vachana/gTTS) + audio ducking + wave-ring จาก amplitude จริง
+- ✅ **เสียง** — wake word "จาร์วิส" (regex กว้าง) + คุยต่อเนื่อง 15 วิ + TTS ไทย server-side (vachana/gTTS) + audio ducking + wave-ring จาก amplitude จริง
 - ✅ **ข้อมูล** — `search_web` (ddgs) / `get_weather` (Open-Meteo, ปรับตามคำถาม) / อีเมล Gmail เต็ม (อ่าน/ค้น/ส่ง/ไฟล์แนบ/ลายเซ็นอัตโนมัติ/ยืนยัน 2 ขั้น)
 - ✅ **ไฟล์ในคอม** — `list_files`/`read_file`/`create_folder`/`write_file`/`delete_path` จำกัดโฟลเดอร์ + audit log
 - ✅ **YouTube** — เปิด/คุม/เต็มจอ ผ่าน HUD (เสียงเริ่ม 25% ตอนเปิดใหม่, เปลี่ยนเพลงคงเสียงเดิม)
@@ -52,7 +52,7 @@ Phase นี้เท่านั้นที่ต้องทำเรื่�
 ### 1. เสียง & บทสนทนา
 | ต้องมี | สถานะ | หมายเหตุ |
 |---|---|---|
-| Wake word + ฟังตลอด | ✅ | "จัสมิน" + regex กว้าง |
+| Wake word + ฟังตลอด | ✅ | "จาร์วิส" + regex กว้าง |
 | คุยต่อเนื่องไม่ต้องเรียกชื่อซ้ำ | ✅ | 15 วิ |
 | เสียงพูดไทยธรรมชาติ + ลดเสียงเพลงตอนพูด | ✅ | vachana/gTTS + ducking |
 | แทรก/ขัดกลางประโยคได้ | ❌ | ต้องทำ AEC (`getUserMedia echoCancellation`) + STT ที่ฟังระหว่างพูด |
@@ -70,10 +70,10 @@ Phase นี้เท่านั้นที่ต้องทำเรื่�
 | ต้องมี | สถานะ | หมายเหตุ |
 |---|---|---|
 | ความจำ (fact) ถาวรข้ามเซสชัน | ✅ | Group A (`remember`/`recall`) |
-| **จำบทสนทนาข้ามการ restart server** | ❌ | ตอนนี้ `chat` เป็น object ใน RAM — restart แล้วลืมทั้งบทสนทนา เหลือแค่ fact · เก็บ turn ลง `jusmin.db` + rehydrate ตอน start |
+| **จำบทสนทนาข้ามการ restart server** | ❌ | ตอนนี้ `chat` เป็น object ใน RAM — restart แล้วลืมทั้งบทสนทนา เหลือแค่ fact · เก็บ turn ลง `jarvis.db` + rehydrate ตอน start |
 | รู้เวลาปัจจุบัน / ตำแหน่ง | ✅ | `_now_preamble` / geolocation |
 | จำเอง (สกัด fact จากบทสนทนาโดยไม่ต้องสั่ง) | ❌ | pass เบื้องหลังเรียก `remember()` |
-| **รู้สถานะเครื่อง** (แบต / เน็ต / CPU / หน้าต่างที่โฟกัสอยู่) | ❌ | `psutil` + platform-specific — ให้ จัสมิน มี ambient awareness |
+| **รู้สถานะเครื่อง** (แบต / เน็ต / CPU / หน้าต่างที่โฟกัสอยู่) | ❌ | `psutil` + platform-specific — ให้ จาร์วิส มี ambient awareness |
 | รู้ว่าในบ้านมีอุปกรณ์อะไร เปิด/ปิดอยู่ ใครอยู่บ้าน | ❌ | ผูกกับหมวด 6 (`control_home`) |
 | ปฏิทิน / ตารางนัด | ❌ | Google Calendar |
 | ค้นความจำแบบ semantic | 🟡 | ตอนนี้ LIKE — พอ fact เยอะค่อยทำ FTS5/embedding |
@@ -119,7 +119,7 @@ Phase นี้เท่านั้นที่ต้องทำเรื่�
 | ต้องมี | สถานะ | หมายเหตุ |
 |---|---|---|
 | วิเคราะห์รูป / อ่านภาพหน้าจอ (`analyze_image`) | ❌ | Gemini เป็น multimodal อยู่แล้ว แค่ต่อ tool |
-| **ถ่าย screenshot + อ่าน/เขียน clipboard** | ❌ | `mss`/`ImageGrab` + `pyperclip` — "จัสมิน อันนี้บนจอฉันคืออะไร" / "ก๊อปข้อความนี้ให้หน่อย" |
+| **ถ่าย screenshot + อ่าน/เขียน clipboard** | ❌ | `mss`/`ImageGrab` + `pyperclip` — "จาร์วิส อันนี้บนจอฉันคืออะไร" / "ก๊อปข้อความนี้ให้หน่อย" |
 | อ่าน/สรุป PDF, เอกสาร | 🟡 | ไฟล์แนบดาวน์โหลดได้แล้ว แต่ยังไม่ auto-อ่าน |
 | กล้องดูห้อง / รู้ว่าใครเข้ามา | ❌ | ต้องมีกล้อง + vision loop |
 
@@ -137,7 +137,7 @@ Phase นี้เท่านั้นที่ต้องทำเรื่�
 | ติดตามโควตา + cooldown | ✅ | |
 | `setup.bat` / `dev.bat` | ✅ | |
 | สลับโมเดลได้ (ไม่ผูก Gemini) — LiteLLM | ⛔ ไม่ทำ | ตัดออก 2026-08-29 — ใช้ Gemini อย่างเดียว ยอมผูกกับโควตา free tier (แลกกับเก็บ automatic function calling ไว้) |
-| log ว่า จัสมิน ทำอะไรไปบ้าง (นอกจาก file audit) | ❌ | |
+| log ว่า จาร์วิส ทำอะไรไปบ้าง (นอกจาก file audit) | ❌ | |
 
 ---
 
@@ -162,7 +162,7 @@ core = FastAPI server + `tools/` เดิม · frontend เปลี่ยน�
 
 | งาน | เครื่องมือ | เหตุผล |
 |---|---|---|
-| **1. ตรวจจับ wake word "จัสมิน"** (รันตลอด) | **openWakeWord** — โมเดล "จัสมิน" custom (train ใน Colab, gen ตัวอย่างด้วย TTS) | ฟรี Apache-2.0 · ~1-2MB · offline · กิน CPU น้อยมาก · รัน 24/7 ได้ทั้ง desktop และ Pi |
+| **1. ตรวจจับ wake word "จาร์วิส"** (รันตลอด) | **openWakeWord** — โมเดล "จาร์วิส" custom (train ใน Colab, gen ตัวอย่างด้วย TTS) | ฟรี Apache-2.0 · ~1-2MB · offline · กิน CPU น้อยมาก · รัน 24/7 ได้ทั้ง desktop และ Pi |
 | **2. ถอดเสียงประโยคคำสั่ง** (เป็นช่วงๆ หลัง wake) | **faster-whisper `small`** (local, default) · `medium`/GPU บนเครื่องแรง · เครื่องอ่อน/Pi → `whisper.cpp base` หรือ Vosk | ไทยดี · offline · โมเดล ~500MB โหลดครั้งแรก (เหมือน `voices/`) |
 | 2. (ทางเลือกออนไลน์) | **Whisper API / `gpt-4o-transcribe` / Deepgram** | แม่นสุด ไม่กินเครื่อง — สำหรับคนไม่ซีเรียส privacy |
 
@@ -171,7 +171,7 @@ core = FastAPI server + `tools/` เดิม · frontend เปลี่ยน�
 **Audio pipeline (ทำให้ใช้ได้ทุก webview):** frontend ไม่แตะ `SpeechRecognition` เลย — `getUserMedia()` → ดาวน์แซมเปิล 16kHz mono → สตรีม PCM ผ่าน **WebSocket `/ws/audio`** (เสียงดิบล้วน ทำงานใน Tauri/pywebview/Electron/เบราว์เซอร์เหมือนกันหมด) · server รัน openWakeWord ตลอด → fire → บัฟเฟอร์ ~5 วิ → faster-whisper → เข้า `chat_endpoint` เดิม · ส่ง event `{wake}` / `{transcript}` กลับ
 
 **ผลพลอยได้:**
-- **barge-in** — server มีสตรีมเสียงตลอด รู้ว่าผู้ใช้พูดแทรกตอน จัสมิน พูดอยู่
+- **barge-in** — server มีสตรีมเสียงตลอด รู้ว่าผู้ใช้พูดแทรกตอน จาร์วิส พูดอยู่
 - **headless บน Pi** — entrypoint เล็กๆ อ่านไมค์ผ่าน `sounddevice` ตรงๆ ไม่ต้องมีเบราว์เซอร์เลย
 - `voice.js` **ง่ายลงมาก** — ตัด hack restart-loop / debounce กัน STT ตัดคำทิ้งได้ เหลือแค่สตรีมเสียง + รับ event
 - offline · ไม่พึ่ง Google · ใช้ได้กับ Telegram (ส่ง voice message → server ถอดเสียงตัวเดียวกัน)
@@ -184,17 +184,17 @@ deps ใหม่: `openwakeword`, `faster-whisper`, `sounddevice` (`websockets`
   - Linux: ต้องมี `PyGObject` + `WebKit2` (system package) → distribute เป็น **AppImage** (รันได้ทุก distro) หรือ `.deb`/Flatpak
 - ทางเลือก: **Tauri** (ไฟล์เล็กสุด, Rust shell + Python sidecar — moving parts เยอะกว่า) · **Electron** (ง่ายสุด, ใหญ่สุด, Speech API ทำงานทุกที่ถ้ายังไม่ย้าย STT)
 - **system tray** (ย่อลง tray, ฟังอยู่เบื้องหลัง — Jarvis มาก) + ตัวเลือก auto-start ตอน login
-- **user-data dir**: `jusmin.db`, `.env`, โมเดล TTS/STT, `voices/`, `logs/` → `%APPDATA%\Jusmin` (Windows) / `~/.local/share/jusmin` (Linux) — ไม่ใช่ข้างๆ binary
+- **user-data dir**: `jarvis.db`, `.env`, โมเดล TTS/STT, `voices/`, `logs/` → `%APPDATA%\Jarvis` (Windows) / `~/.local/share/jarvis` (Linux) — ไม่ใช่ข้างๆ binary
 - first-run: บันเดิลหรือดาวน์โหลดโมเดล TTS/STT ครั้งแรก (เหมือน `voices/` ตอนนี้)
 
 ---
 
 ## ลำดับพัฒนา (เรียงตามคุ้มค่า/แรง)
 
-> **implementation plan ละเอียดต่อฟีเจอร์** อยู่ใน `jusmin-ai/plans/NN-<ชื่อ>.md` — เขียนตอนเริ่มแต่ละอัน
-> - [`plans/01-read-url-analyze-image.md`](jusmin-ai/plans/01-read-url-analyze-image.md) — code-complete (branch `phase1-tier1`), รอ user เทสเบราว์เซอร์ + commit
-> - [`plans/02-media.md`](jusmin-ai/plans/02-media.md) — ค้น/โหลด/เปิดดู รูป+วิดีโอ — **เสร็จ + deploy แล้ว**
- - [`plans/03-bambu-printer.md`](jusmin-ai/plans/03-bambu-printer.md) — ต่อเครื่องพิมพ์ 3D Bambu Lab (MQTT + FTPS + สไลซ์อัตโนมัติ + กล้อง + แจ้งเตือน) — **เขียนแผนไว้แล้ว รอผู้ใช้ซื้อเครื่อง**
+> **implementation plan ละเอียดต่อฟีเจอร์** อยู่ใน `jarvis-ai/plans/NN-<ชื่อ>.md` — เขียนตอนเริ่มแต่ละอัน
+> - [`plans/01-read-url-analyze-image.md`](jarvis-ai/plans/01-read-url-analyze-image.md) — code-complete (branch `phase1-tier1`), รอ user เทสเบราว์เซอร์ + commit
+> - [`plans/02-media.md`](jarvis-ai/plans/02-media.md) — ค้น/โหลด/เปิดดู รูป+วิดีโอ — **เสร็จ + deploy แล้ว**
+ - [`plans/03-bambu-printer.md`](jarvis-ai/plans/03-bambu-printer.md) — ต่อเครื่องพิมพ์ 3D Bambu Lab (MQTT + FTPS + สไลซ์อัตโนมัติ + กล้อง + แจ้งเตือน) — **เขียนแผนไว้แล้ว รอผู้ใช้ซื้อเครื่อง**
 
 ### Tier 1 — แกน Jarvis · เข้ากับโครงเดิม · **= งาน Phase 1**
 
@@ -202,7 +202,7 @@ deps ใหม่: `openwakeword`, `faster-whisper`, `sounddevice` (`websockets`
 
 1. **`read_url` + `analyze_image`** ✅ code-complete (branch `phase1-tier1`, รอ user เทส + commit) — `plans/01`
    - `tools/web.py` +`read_url(url)` (trafilatura + SSRF guard) · `tools/vision.py` *(ใหม่)* +`analyze_image(path, question)` (Gemini vision, client แยก lazy)
-1.5. **ค้น/โหลด/เปิดดู รูป+วิดีโอ** — `plans/02-media.md` (ผู้ใช้ขอแทรก) — `search_media` / `download_media` (รูป sync, วิดีโอ async+notify) / `view_media` (overlay เต็มจอ) + endpoint `/api/media` (containment + Range) + HUD `media.js`/`media.css` · จัสมิน เลือกโฟลเดอร์ย่อยเอง · วิดีโอไม่ cap
+1.5. **ค้น/โหลด/เปิดดู รูป+วิดีโอ** — `plans/02-media.md` (ผู้ใช้ขอแทรก) — `search_media` / `download_media` (รูป sync, วิดีโอ async+notify) / `view_media` (overlay เต็มจอ) + endpoint `/api/media` (containment + Range) + HUD `media.js`/`media.css` · จาร์วิส เลือกโฟลเดอร์ย่อยเอง · วิดีโอไม่ cap
 2. **Telegram bot**
    - refactor `server.py`: ดึงแกนของ `chat_endpoint` เป็น `handle_message(text, geo=None, source="web") -> (reply, actions)` ที่ web + telegram เรียกร่วมกัน
    - `channels/telegram.py` — `python-telegram-bot` (long-polling ไม่ต้องมี public URL) · `.env`: `TELEGRAM_BOT_TOKEN` + `TELEGRAM_ALLOWED_USER_ID` (กันคนอื่นสั่ง)
@@ -211,18 +211,18 @@ deps ใหม่: `openwakeword`, `faster-whisper`, `sounddevice` (`websockets`
    - `tools/watchers.py` — poller เบื้องหลังใน scheduler thread เดิม: เมลใหม่จากคนสำคัญ / reminder / อากาศเปลี่ยน (จะตก/ร้อนจัด) / ปฏิทินใกล้ถึง → `notify.push()` → `notify.js` พูด
    - scheduler ยิง `daily_briefing` เอง (เวลา + สวิตช์เปิด/ปิด เก็บผ่าน `remember()` หรือ config)
 4. **รัน 24/7 บน Pi เป็น service**
-   - `deploy/jusmin.service` (systemd, `Restart=always`, `WantedBy=multi-user.target`) + คู่มือ
+   - `deploy/jarvis.service` (systemd, `Restart=always`, `WantedBy=multi-user.target`) + คู่มือ
    - HUD เปิดบนแท็บเล็ต/มือถือในบ้าน ชี้มาที่ IP ของ Pi · **headless แท้ (ไม่มีเบราว์เซอร์) รอ STT ของ Phase 2**
 
 **เลื่อนไว้ (รอฮาร์ดแวร์):**
 - ⏸️ **`control_home()` + Home Assistant + safety whitelist** — `tools/home.py` เรียก HA REST API (`/api/services/...`) · whitelist entity+action ก่อนสั่ง (ไม่เชื่อ LLM) · confirm-gate ใช้ pattern เดียวกับ `send_email` (`_pending_send`) · เริ่มเมื่อมี HA + ESP32/รีเลย์/อุปกรณ์
-- ⏸️ **เครื่องพิมพ์ 3D Bambu Lab** — `tools/printer.py` · MQTT 8883 (สถานะ+สั่งงาน) + FTPS 990 (อัปโหลด) + Bambu Studio CLI (สไลซ์อัตโนมัติ) + กล้อง→`analyze_image` + watcher แจ้งเตือนเชิงรุก · **ต้องเปิด Developer Mode ที่เครื่อง (แลกกับเสีย Bambu Handy จากนอกบ้าน)** · แผนละเอียด + ข้อมูลที่ค้นมาแล้วอยู่ใน [`plans/03-bambu-printer.md`](jusmin-ai/plans/03-bambu-printer.md) · เริ่มเมื่อผู้ใช้ซื้อเครื่อง (ไม่ต้องซื้ออุปกรณ์เสริมอื่น)
+- ⏸️ **เครื่องพิมพ์ 3D Bambu Lab** — `tools/printer.py` · MQTT 8883 (สถานะ+สั่งงาน) + FTPS 990 (อัปโหลด) + Bambu Studio CLI (สไลซ์อัตโนมัติ) + กล้อง→`analyze_image` + watcher แจ้งเตือนเชิงรุก · **ต้องเปิด Developer Mode ที่เครื่อง (แลกกับเสีย Bambu Handy จากนอกบ้าน)** · แผนละเอียด + ข้อมูลที่ค้นมาแล้วอยู่ใน [`plans/03-bambu-printer.md`](jarvis-ai/plans/03-bambu-printer.md) · เริ่มเมื่อผู้ใช้ซื้อเครื่อง (ไม่ต้องซื้ออุปกรณ์เสริมอื่น)
 
 > **หลัง Tier 1 เสร็จ → ทำ Tier 2 → Tier 3 ต่อ** (ยังอยู่ Phase 1 / บนเว็บ) แล้วค่อยขึ้น Phase 2
 
 ### Tier 2 — เพิ่มความลื่น/ฉลาด (Phase 1, หลัง Tier 1)
-- **Conversation persistence** — เก็บทุก turn ลงตาราง `conversation` ใน `jusmin.db` · ตอน start rehydrate N turn ล่าสุดเข้า `chat` history → restart แล้วคุยต่อได้ (ตอนนี้ลืมหมด)
-- **Auto-memory** — ใน `handle_message` หลังจบ turn: ถ้าผู้ใช้เผยข้อมูลส่วนตัว → Gemini call เบาๆ 1 ครั้งสกัดเป็น fact → `remember(tag="auto")` · หรือ system prompt สั่ง จัสมิน เรียก `remember()` เองเชิงรุก
+- **Conversation persistence** — เก็บทุก turn ลงตาราง `conversation` ใน `jarvis.db` · ตอน start rehydrate N turn ล่าสุดเข้า `chat` history → restart แล้วคุยต่อได้ (ตอนนี้ลืมหมด)
+- **Auto-memory** — ใน `handle_message` หลังจบ turn: ถ้าผู้ใช้เผยข้อมูลส่วนตัว → Gemini call เบาๆ 1 ครั้งสกัดเป็น fact → `remember(tag="auto")` · หรือ system prompt สั่ง จาร์วิส เรียก `remember()` เองเชิงรุก
 - **Skills ปรับปรุงตัวเองได้** — `skills/*.md` (name + "ใช้เมื่อไหร่" + instruction) · `tools/skills.py`: list เข้า preamble (1 บรรทัด/skill), `use_skill(name)` คืน instruction เต็ม, `create_skill()`/`update_skill()` เขียนไฟล์ · **instruction ล้วน — ไม่ให้เขียนโค้ดรันเอง** (ประกอบ tool ที่ปลอดภัยอยู่แล้วเท่านั้น)
 - **subagent** — `tools/subagent.py` `run_subagent(task, allowed_tools=[])`: `client.chats.create()` ใหม่ system prompt โฟกัส + tool ชุดย่อย + cap 8 รอบ → คืนแค่สรุป (ไม่กิน context หลัก)
 - **timers / นาฬิกาปลุก / pomodoro** — `tools/timers.py` + scheduler + `notify` · HUD countdown panel (**ต้องมี `pending_action` queue ก่อน** — ดูหลักสถาปัตยกรรม)
@@ -257,7 +257,7 @@ deps ใหม่: `openwakeword`, `faster-whisper`, `sounddevice` (`websockets`
 2. **shared `handle_message()`** — web / Telegram / (อนาคต) เรียกแกนเดียวกัน (`text, geo, source` → `reply, actions`) · action ที่เป็น browser (YouTube, การ์ดอากาศ, เต็มจอ, timer panel) เดกราดเป็นข้อความ/รูปบน channel ที่ไม่มี HUD
 3. **event-watcher pattern** — ความเป็นเชิงรุก **ทั้งหมด** ไปทางเดียว: poller เบื้องหลัง (`tools/watchers.py`) → `notify.push()` → `notify.js` พูด · อย่ากระจายไปเขียน logic แจ้งเตือนซ้ำในหลาย tool
 4. **HUD-panel principle** — ต่อจาก "ห้ามใส่ UI ข้อมูลปลอม": ทุก tool ที่ผลิตข้อมูล (`analyze_image`, ปฏิทิน, ข่าว, system status, timer) **ต้องมีพาเนล HUD ของตัวเอง** ที่ผูกข้อมูลจริง — ไม่งั้นตอบเป็นข้อความในแชทอย่างเดียว
-5. **`JUSMIN_DATA_DIR` ตั้งแต่ตอนนี้** — path ของ `jusmin.db` / `.env` / โมเดล / `voices/` / `logs/` / `skills/` อ่านจาก env var เดียว (default = repo dir) เพื่อให้ Phase 2 packaging (user-data dir) ไม่ต้องรื้อทีหลัง
+5. **`JARVIS_DATA_DIR` ตั้งแต่ตอนนี้** — path ของ `jarvis.db` / `.env` / โมเดล / `voices/` / `logs/` / `skills/` อ่านจาก env var เดียว (default = repo dir) เพื่อให้ Phase 2 packaging (user-data dir) ไม่ต้องรื้อทีหลัง
 6. **quota Gemini free tier** — ทุก tool call + reasoning กิน quota · tool list ยาวขึ้นเรื่อยๆ → เลือก tool ช้าลง · เฝ้าดู ถ้าชนบ่อยพิจารณา (ก) จัดกลุ่ม tool ให้ Gemini เห็นน้อยลงต่อเทิร์น (ข) ย้ายไปรุ่น quota สูงกว่า — **ไม่ใช่ LiteLLM (ตัดแล้ว)**
 7. **ทุก tool ที่ทำ action ออกนอก** (ส่งเมล, ลบไฟล์, คุมบ้าน) — confirm-gate แบบ `send_email` (`_pending_send` 2 ขั้น) ไม่ใช่ docstring อย่างเดียว
 
@@ -267,11 +267,11 @@ deps ใหม่: `openwakeword`, `faster-whisper`, `sounddevice` (`websockets`
 
 พิจารณาแล้ว: **LiteLLM** (lib model-agnostic), **Letta/MemGPT** (memory engine), **Agno**, **Pydantic AI**, **CrewAI**, **Claude Agent SDK**, **Hermes Agent by Nous Research** — **ทั้งหมดไม่เอา** (LiteLLM ก็ตัดออก 2026-08-29, ใช้ Gemini อย่างเดียว)
 
-- "เปลือก จัสมิน" ที่สร้างเอง = HUD Jarvis + wake word ไทย + TTS ไทย + audio choreography + บุคลิก + bridge `pending_action → app.js` — **ไม่มี framework ไหนให้** ต้องสร้างใหม่บน runtime เขาอยู่ดี
+- "เปลือก จาร์วิส" ที่สร้างเอง = HUD Jarvis + wake word ไทย + TTS ไทย + audio choreography + บุคลิก + bridge `pending_action → app.js` — **ไม่มี framework ไหนให้** ต้องสร้างใหม่บน runtime เขาอยู่ดี
 - ของ generic ที่ยังขาด (memory ขั้นสูง / skills / subagent) อย่างละ ~ครึ่งวันบนฐาน SQLite + tool-loop เดิม — ย้ายไป framework ใช้เวลามากกว่า
 - ผูกกับ Gemini + `google-genai` automatic function calling (รันฟังก์ชัน tool ให้เอง วนจนจบ) — ไม่ต้องเขียน agent loop เอง
-- จัสมิน เป็น personal use คนเดียว ยังไม่โตถึงจุดที่ท่อ generic (multi-user, 20 แพลตฟอร์ม, pipeline หลาย agent) ครอบงำ
+- จาร์วิส เป็น personal use คนเดียว ยังไม่โตถึงจุดที่ท่อ generic (multi-user, 20 แพลตฟอร์ม, pipeline หลาย agent) ครอบงำ
 
 **ทบทวนใหม่เมื่อ:** ใช้เวลาส่วนใหญ่ re-implement ท่อ agent generic · หรือ roadmap โตพ้น "เลขาส่วนตัว" → multi-user / หลายสิบแพลตฟอร์ม / multi-agent pipeline หนัก
 
-**ทางสายกลาง (ถ้าอยากได้ memory engine เขาจริงๆ):** เก็บ จัสมิน เป็น frontend (HUD + เสียง + บุคลิก + gateway) แล้วให้ Letta/Hermes Agent เป็น "สมอง" backend — `/api/chat` ยิงไป Letta server แทนรัน loop เอง · แลกกับมี service ต้องรันตลอด
+**ทางสายกลาง (ถ้าอยากได้ memory engine เขาจริงๆ):** เก็บ จาร์วิส เป็น frontend (HUD + เสียง + บุคลิก + gateway) แล้วให้ Letta/Hermes Agent เป็น "สมอง" backend — `/api/chat` ยิงไป Letta server แทนรัน loop เอง · แลกกับมี service ต้องรันตลอด

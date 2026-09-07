@@ -2,9 +2,9 @@
 REM ============================================================
 REM  setup.bat  - run ONCE right after cloning
 REM   0) install Python 3.10+ if missing (via winget)
-REM   1) create venv in jusmin-ai\
+REM   1) create venv in jarvis-ai\
 REM   2) pip install -r requirements.txt
-REM   3) create jusmin-ai\.env (asks for your Gemini API key)
+REM   3) create jarvis-ai\.env (asks for your Gemini API key)
 REM  after this: double-click  dev.bat  to run the web app
 REM ============================================================
 setlocal
@@ -44,7 +44,7 @@ pause
 exit /b 1
 
 :HAVE_PYTHON
-cd /d "%ROOT%jusmin-ai"
+cd /d "%ROOT%jarvis-ai"
 
 echo [setup] 1/3  Creating virtual environment...
 if exist "venv\Scripts\activate.bat" (
@@ -60,7 +60,7 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 if errorlevel 1 ( echo [setup] pip install failed - check the errors above & pause & exit /b 1 )
 
-echo [setup] 3/3  Setting up jusmin-ai\.env ...
+echo [setup] 3/3  Setting up jarvis-ai\.env ...
 if exist ".env" ( echo        .env already exists - keeping it & goto ENV_OK )
 if not exist ".env.example" ( echo        .env.example missing - make .env yourself with GEMINI_API_KEY=... & goto ENV_OK )
 copy /y ".env.example" ".env" >nul
@@ -77,8 +77,8 @@ echo        wrote .env from template - open it and add your Gemini key before de
 echo.
 echo ============================================================
 echo  [setup] Done.
-echo   - Gemini API key ^(free^): https://aistudio.google.com  -> put it in  jusmin-ai\.env
-echo   - Optional: add EMAIL_ADDRESS + EMAIL_APP_PASSWORD in jusmin-ai\.env for Gmail
+echo   - Gemini API key ^(free^): https://aistudio.google.com  -> put it in  jarvis-ai\.env
+echo   - Optional: add EMAIL_ADDRESS + EMAIL_APP_PASSWORD in jarvis-ai\.env for Gmail
 echo   - Start the app:  double-click  dev.bat  in the repo root
 echo ============================================================
 pause
