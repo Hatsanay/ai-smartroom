@@ -108,7 +108,7 @@ def analyze_image(path: str, question: str = "") -> str:
 | `server.py` | `from tools import (... analyze_image, read_url ...)` (alpha) · +2 ตัวใน `chat = client.chats.create(tools=[...])` |
 | `personality.py` | +1 บรรทัด SYSTEM_PROMPT: "อ่าน/สรุปหน้าเว็บจากลิงก์ (`read_url`) และดู/วิเคราะห์รูปในโฟลเดอร์ที่อนุญาต (`analyze_image`) ได้" |
 | `.env.example` + `.env` | `# VISION_MODEL=gemini-3.5-flash   (ใส่ถ้ารุ่น default ไม่รับรูป)` |
-| `jarvis-ai/CLAUDE.md` | section ใหม่: 2 tool + pattern "vision = nested Gemini call" + SSRF guard ของ read_url + อัปเดต tree (`web.py` มี read_url, `vision.py` ใหม่) |
+| `CLAUDE.md` | section ใหม่: 2 tool + pattern "vision = nested Gemini call" + SSRF guard ของ read_url + อัปเดต tree (`web.py` มี read_url, `vision.py` ใหม่) |
 
 ---
 

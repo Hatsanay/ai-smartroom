@@ -1,1 +1,10 @@
 deploy.bat
+
+.env
+!.env.example
+__pycache__/
+venv/
+voices/
+logs/
+file_access_config.json
+jarvis.db

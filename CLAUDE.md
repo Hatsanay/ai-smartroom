@@ -1,9 +1,30 @@
 # จาร์วิส — AI Assistant Project
 
-> **⚠️ branch นี้คือ `jarvis` — แยกขาดจาก branch `jusmin` ไม่ merge หากัน**
-> `jarvis` = บ้านเพื่อน · ชื่อ "จาร์วิส" · เพศชาย · เสียง `th_m_1` + engine `vachana` · โฟลเดอร์ `jarvis-ai/` · **มี Bambu Lab P2S** (`plans/03`)
-> `jusmin` = บ้านเจ้าของโปรเจกต์ · ชื่อ "จัสมิน" · เพศหญิง · เสียง `th_f_1` + engine `google` · โฟลเดอร์ `jusmin-ai/` · **ไม่มี Bambu Lab**
-> แก้บั๊กแกนกลางต้องแก้สองที่แยกกัน (ผู้ใช้เลือก "แยกขาด ไม่ต้อง merge กัน" ไว้ตอนแตก branch)
+> **⚠️ โฟลเดอร์นี้คือ branch `jarvis` — เป็น git repo ของตัวเอง แยกขาดจาก `jusmin` ไม่ merge หากัน**
+>
+> **ราก repo นี้ = ตัวโปรเจคเลย** (ไม่มีโฟลเดอร์ย่อยอีกชั้น) — `server.py` / `tools/` / `static/` / `setup.bat` / `dev.bat` อยู่ที่นี่หมด
+>
+> โครงบนดิสก์ของเจ้าของโปรเจกต์:
+> ```
+> D:\projecti-smartroom\        <- git repo #1 · branch jusmin · port 8000
+> ├── jusmin-ai\                    <- ตัวโปรเจคจัสมิน
+> ├── setup.bat  dev.bat  deploy.bat
+> └── jarvis-ai\                    <- git repo #2 (แยกอิสระ) · branch jarvis · port 8001
+>     ├── server.py  tools\  static\   <- โฟลเดอร์นี้ = ที่คุณอยู่ตอนนี้
+>     └── setup.bat  dev.bat  deploy.bat
+> ```
+> repo ชั้นนอกใส่ `/jarvis-ai/` ไว้ใน `.gitignore` แล้ว จะได้ไม่ดูดโฟลเดอร์นี้เข้าไปเป็น submodule
+>
+> | | `jusmin` | `jarvis` (ที่นี่) |
+> |---|---|---|
+> | บ้าน | เจ้าของโปรเจกต์ | เพื่อน |
+> | ชื่อ / เพศ | จัสมิน · หญิง | จาร์วิส · ชาย |
+> | เสียง / engine | `th_f_1` · `google` | `th_m_1` · **`vachana`** |
+> | port | 8000 | **8001** |
+> | Bambu Lab P2S | ไม่มี | **มี** (`plans/03`) |
+>
+> ทั้งสอง push ขึ้น `github.com/Hatsanay/ai-smartroom` repo เดียวกัน คนละ branch · `deploy.bat` แต่ละตัวเช็ค branch ก่อน push
+> **แก้บั๊กแกนกลางต้องแก้สองที่แยกกัน** (ผู้ใช้เลือก "แยกขาด ไม่ต้อง merge กัน")
 
 > Context file สำหรับ Claude Code เอาไว้ปรับตัวให้เข้าใจเป้าหมายและขอบเขตของโปรเจกต์นี้
 

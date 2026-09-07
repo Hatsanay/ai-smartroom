@@ -162,7 +162,7 @@ P2S เป็นรุ่นใหม่ ไลบรารีอาจยัง
    — P2S ติดมาจากโรงงาน **ไม่ต้องอัปเฟิร์มแวร์ก่อน**
 2. จด **IP · Serial · Access Code** จากจอเครื่อง → ใส่ `.env`
 3. ลง **Bambu Studio** บนเครื่องที่รัน server → **export preset JSON 3 ไฟล์** (machine / process / filament)
-   เก็บไว้ที่ `jarvis-ai/printer_profiles/` (gitignore — เป็นค่าเฉพาะเครื่อง)
+   เก็บไว้ที่ `printer_profiles/` (gitignore — เป็นค่าเฉพาะเครื่อง)
    ⚠️ ต้องเป็น preset ของ **P2S + AMS 2 Pro** และ Bambu Studio ต้องเวอร์ชันที่รู้จัก P2S แล้ว
 4. ~~เสียบ microSD~~ **P2S ไม่ต้อง** — มี eMMC 8 GB ในตัว (เสียบ USB ได้ถ้าอยากมีที่พักไฟล์แยก)
 5. เปิด firewall/router ให้ port **8883** (MQTT) · **990 + 50000–50100** (FTPS) · **322** (กล้อง RTSPS) ในวง LAN

@@ -7,7 +7,7 @@ REM   2) activate venv
 REM   3) run server.py  + open the browser automatically
 REM ============================================================
 setlocal
-cd /d "%~dp0jarvis-ai"
+cd /d "%~dp0"
 
 echo [dev] 1/3  Freeing port 8001 (killing old JARVIS server if any)...
 for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":8001" ^| findstr "LISTENING"') do (
@@ -16,8 +16,8 @@ for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":8001" ^| findstr "LISTENING
 )
 
 if not exist "venv\Scripts\activate.bat" (
-    echo [dev] venv not found at jarvis-ai\venv - create it first:
-    echo       cd jarvis-ai ^&^& python -m venv venv ^&^& venv\Scripts\activate ^&^& pip install -r requirements.txt
+    echo [dev] venv not found - create it first:
+    echo       python -m venv venv ^&^& venv\Scripts\activate ^&^& pip install -r requirements.txt
     pause
     exit /b 1
 )
