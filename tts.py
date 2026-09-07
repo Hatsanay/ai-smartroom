@@ -27,7 +27,7 @@ from vachanatts.main import load_voice
 from vachanatts.voice import Voice
 
 VALID_VOICES = {"th_f_1", "th_m_1", "th_f_2", "th_m_2"}
-DEFAULT_VOICE = "th_m_1"
+DEFAULT_VOICE = "th_m_2"
 VALID_ENGINES = {"vachana", "google"}
 DEFAULT_ENGINE = "vachana"
 

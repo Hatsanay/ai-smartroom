@@ -181,7 +181,7 @@ class QuotaStatus(BaseModel):
 
 class TTSRequest(BaseModel):
     text: str
-    voice: str = "th_m_1"
+    voice: str = "th_m_2"
     engine: str = "vachana"
 
 

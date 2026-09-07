@@ -54,7 +54,7 @@ const THAI_VOICES = [
   { id: 'th_m_2', label: 'เสียงชาย 2' },
 ];
 
-let selectedVoiceId = localStorage.getItem('jarvis_voice') || 'th_m_1';
+let selectedVoiceId = localStorage.getItem('jarvis_voice') || 'th_m_2';
 
 function populateVoiceOptions() {
   voiceSelect.innerHTML = '';

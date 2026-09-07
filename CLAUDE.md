@@ -19,7 +19,7 @@
 > |---|---|---|
 > | บ้าน | เจ้าของโปรเจกต์ | เพื่อน |
 > | ชื่อ / เพศ | จัสมิน · หญิง | จาร์วิส · ชาย |
-> | เสียง / engine | `th_f_1` · `google` | `th_m_1` · **`vachana`** |
+> | เสียง / engine | `th_f_1` · `google` | `th_m_2` · **`vachana`** |
 > | port | 8000 | **8001** |
 > | Bambu Lab P2S | ไม่มี | **มี** (`plans/03`) |
 >
@@ -222,7 +222,7 @@
   - ลองปรับ ONNX Runtime threading (`intra_op_num_threads`, `execution_mode`) ดูด้วย แต่ผลออกมา**แย่กว่าเดิม**ทุกค่าที่ลอง (thread เยอะเกิน = overhead จากการซิงค์ thread สำหรับโมเดลเล็กแบบนี้) เลยไม่ใช้ ปล่อยให้ ONNX Runtime auto-detect ตามเดิม
   - ยังไม่ได้ทำ streaming (ส่งเสียงทีละประโยคให้เล่นได้ก่อนประโยคหลังจะ synth เสร็จ) แม้ไลบรารีจะรองรับ (`voice.synthesize()` เป็น generator ทีละประโยคอยู่แล้ว) — เป็นตัวเลือกต่อไปถ้าอยากได้เร็วขึ้นอีกแบบ perceived latency แต่ต้องแก้ playback pipeline ฝั่ง client พอสมควร (คิวเล่นเสียงหลายชิ้น, sync กับกลไก mic-pause/follow-up window เดิม)
 - Logic อยู่ที่ `tts.py` (`synthesize(text, voice, engine)` คืน `(ไบต์เสียง, media_type)`) เรียกผ่าน `POST /api/tts` ใน `server.py` — แคช `Voice` เองใน `_voice_cache` ต่อเสียง โหลดครั้งแรกที่ถูกเรียกใช้เท่านั้น (ไม่ใช่ทุก request)
-- เสียงให้เลือก 4 แบบ: `th_f_1` (ค่าเริ่มต้น), `th_m_1`, `th_f_2`, `th_m_2` — เลือกได้จากเมนูมุมขวาบนของหน้าเว็บ จำค่าไว้ใน localStorage
+- เสียงให้เลือก 4 แบบ: `th_m_2` (ค่าเริ่มต้นของจาร์วิส), `th_m_1`, `th_f_1`, `th_f_2` — เลือกได้จากเมนูมุมขวาบนของหน้าเว็บ จำค่าไว้ใน localStorage
 - โมเดล ONNX ที่โหลดมาแคชไว้ที่โฟลเดอร์ `voices/` (ไม่ commit, อยู่ใน `.gitignore`) กับ `~/.cache/huggingface`
 - **Dependency**: `vachanatts` (ตรงๆ ไม่ใช่ `pythaitts` แล้ว) — ดู `requirements.txt`
 - **License**: Apache-2.0 (ใช้ได้อิสระ)
@@ -462,7 +462,7 @@ threading.Thread(target=_scheduler_loop, daemon=True, name="jarvis-scheduler").s
 
 ## บุคลิกของ จาร์วิส
 
-- **เพศชาย** — ระบุไว้ชัดใน system prompt (`personality.py`) ให้ใช้คำลงท้าย/สรรพนามผู้ชายเสมอ (ครับ, ผม) และ default เสียง TTS เป็น `th_m_1` (ผู้ชาย)
+- **เพศชาย** — ระบุไว้ชัดใน system prompt (`personality.py`) ให้ใช้คำลงท้าย/สรรพนามผู้ชายเสมอ (ครับ, ผม) และ default เสียง TTS เป็น `th_m_2` (ผู้ชาย)
 - **default TTS engine = `vachana` ไม่ใช่ `google`** — Google Translate TTS มีเสียงไทยเดียวเป็นเสียงผู้หญิง เลือกเพศไม่ได้ ถ้าสลับไป google เสียงจะกลายเป็นผู้หญิงทันที (ต่างจาก branch `jusmin` ที่ default เป็น google)
 - ฉลาด กระชับ เป็นกันเอง มีอารมณ์ขันนิด ๆ (สไตล์ AI ใน Iron Man)
 - พูดภาษาไทยเป็นหลัก เว้นแต่ถูกถามเป็นภาษาอื่น
